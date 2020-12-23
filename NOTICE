@@ -1,0 +1,3 @@
+Most of this code is copyright Nvidia, all rights reserved, but under a mit-like
+permissive license see LICENSE.nvidia. The rest (mostly the meson.build things)
+are copyright Michael de Gans (see LICENSE.mit)
