@@ -30,7 +30,7 @@
 #define E0CAA875_7EE8_4F6B_9A1C_99C2CF152440
 
 // If the version is modified, don't forget to change it in the VERSION file
-#define PROJ_VER "1.0.0"
+#define PROJ_VER "1.0.1"
 #define PROJ_DESCRIPTION "nVidia ARGUS Camera Source"
 #define BINARY_PACKAGE "NvARGUSCameraSrc"
 #define PROJ_URL "https://github.com/mdegans/gst-nvarguscamerasrc"
