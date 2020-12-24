@@ -81,6 +81,9 @@
 #define GST_NVARGUS_MEMORY_TYPE "nvarguscam"
 static const int DEFAULT_FPS = 30;
 
+GST_DEBUG_CATEGORY_STATIC(gst_nvarguscamerasrc_debug);
+#define GST_CAT_DEFAULT gst_nvarguscamerasrc_debug
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -194,11 +197,11 @@ namespace ArgusCamera {
 
 // Constants
 
-#define GST_ARGUS_PRINT(...) printf("GST_ARGUS: " __VA_ARGS__)
-#define CONSUMER_PRINT(...) printf("CONSUMER: " __VA_ARGS__)
-#define GST_ARGUS_ERROR(...)                                      \
-  printf("ARGUS_ERROR: Error generated. %s, %s: %d %s", __FILE__, \
-         __FUNCTION__, __LINE__, __VA_ARGS__)
+#define GST_ARGUS_PRINT(...) GST_INFO("GST_ARGUS: " __VA_ARGS__)
+#define CONSUMER_PRINT(...) GST_INFO("CONSUMER: " __VA_ARGS__)
+#define GST_ARGUS_ERROR(...)                                         \
+  GST_ERROR("ARGUS_ERROR: Error generated. %s, %s: %d %s", __FILE__, \
+            __FUNCTION__, __LINE__, __VA_ARGS__)
 
 /*******************************************************************************
  * StreamConsumer thread:
@@ -238,10 +241,10 @@ bool StreamConsumer::threadExecute(GstNvArgusCameraSrc* src) {
   IFrameConsumer* iFrameConsumer = interface_cast<IFrameConsumer>(m_consumer);
 
   // Wait until the producer has connected to the stream.
-  CONSUMER_PRINT("Waiting until producer is connected...\n");
+  CONSUMER_PRINT("Waiting until producer is connected...");
   if (iStream->waitUntilConnected() != STATUS_OK)
     ORIGINATE_ERROR("Stream failed to connect.");
-  CONSUMER_PRINT("Producer has connected; continuing.\n");
+  CONSUMER_PRINT("Producer has connected; continuing.");
   IAutoControlSettings* l_iAutoControlSettings_ptr =
       (IAutoControlSettings*)src->iAutoControlSettings_ptr;
   ICaptureSession* l_iCaptureSession =
@@ -464,13 +467,13 @@ bool StreamConsumer::threadExecute(GstNvArgusCameraSrc* src) {
       src->frameInfo->fd = iNativeBuffer->createNvBuffer(
           streamSize, NvBufferColorFormat_YUV420, NvBufferLayout_BlockLinear);
       if (!src->silent)
-        CONSUMER_PRINT("Acquired Frame. %d\n", src->frameInfo->fd);
+        CONSUMER_PRINT("Acquired Frame. %d", src->frameInfo->fd);
     } else if (iNativeBuffer->copyToNvBuffer(src->frameInfo->fd) != STATUS_OK) {
       ORIGINATE_ERROR("IImageNativeBuffer not supported by Image.");
     }
 
     if (!src->silent)
-      CONSUMER_PRINT("Acquired Frame: %llu, time %llu\n",
+      CONSUMER_PRINT("Acquired Frame: %llu, time %llu",
                      static_cast<unsigned long long>(iFrame->getNumber()),
                      static_cast<unsigned long long>(iFrame->getTime()));
 
@@ -492,7 +495,7 @@ bool StreamConsumer::threadExecute(GstNvArgusCameraSrc* src) {
 
   g_slice_free(NvArgusFrameInfo, src->frameInfo);
   if (!src->argus_in_error) {
-    CONSUMER_PRINT("Done Success\n");
+    CONSUMER_PRINT("Done Success");
   }
   PROPAGATE_ERROR(requestShutdown());
   return true;
@@ -539,7 +542,7 @@ static bool execute(int32_t cameraIndex,
     ORIGINATE_ERROR("Failed to create CaptureSession");
 
   src->iCaptureSession_ptr = iCaptureSession;
-  GST_ARGUS_PRINT("Creating output stream\n");
+  GST_ARGUS_PRINT("Creating output stream");
   UniqueObj<OutputStreamSettings> streamSettings(
       iCaptureSession->createOutputStreamSettings(STREAM_TYPE_EGL));
   IEGLOutputStreamSettings* iStreamSettings =
@@ -591,7 +594,7 @@ static bool execute(int32_t cameraIndex,
 
   src->total_sensor_modes = modes.size();
 
-  GST_ARGUS_PRINT("Available Sensor modes :\n");
+  GST_ARGUS_PRINT("Available Sensor modes :");
   frameRate = src->fps_n / src->fps_d;
   duration = 1e9 * src->fps_d / src->fps_n;
   ISensorMode* iSensorMode[modes.size()];
@@ -604,7 +607,7 @@ static bool execute(int32_t cameraIndex,
     limitExposureTimeRange = iSensorMode[index]->getExposureTimeRange();
     GST_ARGUS_PRINT(
         "%d x %d FR = %f fps Duration = %lu ; Analog Gain range min %f, max "
-        "%f; Exposure Range min %ju, max %ju;\n\n",
+        "%f; Exposure Range min %ju, max %ju;",
         iSensorMode[index]->getResolution().width(),
         iSensorMode[index]->getResolution().height(),
         (1e9 / (iSensorMode[index]->getFrameDurationRange().min())),
@@ -639,7 +642,7 @@ static bool execute(int32_t cameraIndex,
        * sensormode Index.
        */
       GST_INFO_OBJECT(
-          src, " Requested resolution W = %d H = %d not supported by Sensor.\n",
+          src, " Requested resolution W = %d H = %d not supported by Sensor.",
           streamSize.width(), streamSize.height());
       cameraMode = 0;
     } else {
@@ -652,7 +655,7 @@ static bool execute(int32_t cameraIndex,
   if (frameRate >
       round((1e9 / (iSensorMode[cameraMode]->getFrameDurationRange().min())))) {
     src->argus_in_error = TRUE;
-    GST_ARGUS_ERROR("Frame Rate specified is greater than supported\n");
+    GST_ARGUS_ERROR("Frame Rate specified is greater than supported");
   }
 
   IDenoiseSettings* denoiseSettings = interface_cast<IDenoiseSettings>(request);
@@ -766,7 +769,7 @@ static bool execute(int32_t cameraIndex,
       "   Camera mode  = %d \n"
       "   Output Stream W = %d H = %d \n"
       "   seconds to Run    = %d \n"
-      "   Frame Rate = %f \n",
+      "   Frame Rate = %f",
       cameraIndex, cameraMode, iSensorMode[cameraMode]->getResolution().width(),
       iSensorMode[cameraMode]->getResolution().height(), secToRun,
       (1e9 / (iSensorMode[cameraMode]->getFrameDurationRange().min())));
@@ -847,10 +850,9 @@ static bool execute(int32_t cameraIndex,
   requestSourceSettings->setFrameDurationRange(
       Range<uint64_t>(1e9 / frameRate));
 
-  GST_ARGUS_PRINT("Setup Complete, Starting captures for %d seconds\n",
-                  secToRun);
+  GST_ARGUS_PRINT("Setup Complete, Starting captures for %d seconds", secToRun);
 
-  GST_ARGUS_PRINT("Starting repeat capture requests.\n");
+  GST_ARGUS_PRINT("Starting repeat capture requests.");
   Request* captureRequest = request.get();
   src->request_ptr = captureRequest;
   iCaptureSession->capture(captureRequest);
@@ -858,7 +860,7 @@ static bool execute(int32_t cameraIndex,
     ORIGINATE_ERROR("Failed to start capture request");
 
   if (src->argus_in_error) {
-    GST_ARGUS_ERROR("InvalidState.\n");
+    GST_ARGUS_ERROR("InvalidState.");
     iCaptureSession->cancelRequests();
     src->timeout = 1;
   } else if (secToRun != 0) {
@@ -872,7 +874,7 @@ static bool execute(int32_t cameraIndex,
     }
   }
 
-  GST_ARGUS_PRINT("Cleaning up\n");
+  GST_ARGUS_PRINT("Cleaning up");
 
   iCaptureSession->stopRepeat();
   iCaptureSession->waitForIdle();
@@ -894,7 +896,7 @@ static bool execute(int32_t cameraIndex,
   if (src->argus_in_error)
     return false;
 
-  GST_ARGUS_PRINT("Done Success\n");
+  GST_ARGUS_PRINT("Done Success");
 
   return true;
 }
@@ -992,7 +994,7 @@ static gpointer gst_nv_memory_map(GstMemory* mem,
 
   ret = NvBufferGetParams(nvmm_mem->nvcam_buf->dmabuf_fd, &params);
   if (ret != 0) {
-    GST_ERROR("%s: NvBufferGetParams Failed \n", __func__);
+    GST_ERROR("%s: NvBufferGetParams Failed ", __func__);
     goto error;
   }
 
@@ -1039,13 +1041,13 @@ static GstMemory* gst_nv_memory_allocator_alloc(GstAllocator* allocator,
 
     ret = NvBufferCreateEx(&nvbuf->dmabuf_fd, &input_params);
     if (ret != 0) {
-      GST_ERROR("%s: NvBufferCreateEx Failed \n", __func__);
+      GST_ERROR("%s: NvBufferCreateEx Failed ", __func__);
       goto error;
     }
 
     ret = NvBufferGetParams(nvbuf->dmabuf_fd, &param);
     if (ret != 0) {
-      GST_ERROR("%s: NvBufferGetParams Failed \n", __func__);
+      GST_ERROR("%s: NvBufferGetParams Failed ", __func__);
       goto getparam_failed;
     }
 
@@ -1061,7 +1063,7 @@ getparam_failed :
 {
   ret = NvBufferDestroy(nvbuf->dmabuf_fd);
   if (ret != 0) {
-    GST_ERROR("%s: NvBufferDestroy Failed \n", __func__);
+    GST_ERROR("%s: NvBufferDestroy Failed ", __func__);
   }
 }
 error:
@@ -1079,7 +1081,7 @@ static void gst_nv_memory_allocator_free(GstAllocator* allocator,
 
   ret = NvBufferDestroy(nvbuf->dmabuf_fd);
   if (ret != 0) {
-    GST_ERROR("%s: NvBufferDestroy Failed \n", __func__);
+    GST_ERROR("%s: NvBufferDestroy Failed ", __func__);
     goto error;
   }
 
@@ -1090,6 +1092,9 @@ error:
 
 static void gst_nv_memory_allocator_class_init(
     GstNVArgusMemoryAllocatorClass* klass) {
+  GST_DEBUG_CATEGORY_INIT(gst_nvarguscamerasrc_debug, "nvarguscamerasrc", 0,
+                          "nvarguscamerasrc");
+
   GstAllocatorClass* allocator_class;
   allocator_class = (GstAllocatorClass*)klass;
 
@@ -1270,8 +1275,7 @@ static gpointer argus_thread(gpointer src_base) {
   g_cond_signal(&src->nvmm_buffers_queue_cond);
   g_mutex_unlock(&src->nvmm_buffers_queue_lock);
 
-  GST_DEBUG_OBJECT(src, "%s: stop_requested=%d\n", __func__,
-                   src->stop_requested);
+  GST_DEBUG_OBJECT(src, "%s: stop_requested=%d", __func__, src->stop_requested);
   return src_base;
 }
 
@@ -1372,8 +1376,7 @@ static gpointer consumer_thread(gpointer src_base) {
     g_mutex_unlock(&src->nvmm_buffers_queue_lock);
   }
 done:
-  GST_DEBUG_OBJECT(src, "%s: stop_requested=%d\n", __func__,
-                   src->stop_requested);
+  GST_DEBUG_OBJECT(src, "%s: stop_requested=%d", __func__, src->stop_requested);
   gst_mini_object_set_qdata(GST_MINI_OBJECT_CAST(buffer),
                             gst_buffer_metadata_quark, NULL, NULL);
   return NULL;
@@ -1423,17 +1426,16 @@ static gboolean set_range(GstNvArgusCameraSrc* src, guint prop_id) {
 
   if (prop_id == PROP_GAIN_RANGE) {
     str = src->gainRangeString;
-    GST_ARGUS_PRINT("NvArgusCameraSrc: Setting Gain Range : %s\n", str);
+    GST_ARGUS_PRINT("NvArgusCameraSrc: Setting Gain Range : %s", str);
   } else if (prop_id == PROP_EXPOSURE_TIME_RANGE) {
     str = src->exposureTimeString;
-    GST_ARGUS_PRINT("NvArgusCameraSrc: Setting Exposure Time Range : %s\n",
-                    str);
+    GST_ARGUS_PRINT("NvArgusCameraSrc: Setting Exposure Time Range : %s", str);
   } else if (prop_id == PROP_DIGITAL_GAIN_RANGE) {
     str = src->ispDigitalGainRangeString;
-    GST_ARGUS_PRINT("NvArgusCameraSrc: Setting ISP Digital Gain Range : %s\n",
+    GST_ARGUS_PRINT("NvArgusCameraSrc: Setting ISP Digital Gain Range : %s",
                     str);
   } else {
-    GST_ARGUS_PRINT("NvArgusCameraSrc: property not defined\n");
+    GST_ARGUS_PRINT("NvArgusCameraSrc: property not defined");
     return FALSE;
   }
 
@@ -1448,7 +1450,7 @@ static gboolean set_range(GstNvArgusCameraSrc* src, guint prop_id) {
       continue;
 
     if (index == 2) {
-      GST_ARGUS_PRINT("Invalid Range Input\n");
+      GST_ARGUS_PRINT("Invalid Range Input");
       ret = FALSE;
       goto done;
     }
@@ -1459,7 +1461,7 @@ static gboolean set_range(GstNvArgusCameraSrc* src, guint prop_id) {
   if (index == 2) {
     if (prop_id == PROP_GAIN_RANGE) {
       if (array[0] < MIN_GAIN || array[1] > MAX_GAIN) {
-        GST_ARGUS_PRINT("Invalid Gain Range Input\n");
+        GST_ARGUS_PRINT("Invalid Gain Range Input");
         ret = FALSE;
         goto done;
       }
@@ -1468,7 +1470,7 @@ static gboolean set_range(GstNvArgusCameraSrc* src, guint prop_id) {
       src->controls.gainRange = range;
     } else if (prop_id == PROP_EXPOSURE_TIME_RANGE) {
       if (array[0] < MIN_EXPOSURE_TIME || array[1] > MAX_EXPOSURE_TIME) {
-        GST_ARGUS_PRINT("Invalid Exposure Time Range Input\n");
+        GST_ARGUS_PRINT("Invalid Exposure Time Range Input");
         ret = FALSE;
         goto done;
       }
@@ -1477,7 +1479,7 @@ static gboolean set_range(GstNvArgusCameraSrc* src, guint prop_id) {
       src->controls.exposureTimeRange = range;
     } else if (prop_id == PROP_DIGITAL_GAIN_RANGE) {
       if (array[0] < MIN_DIGITAL_GAIN || array[1] > MAX_DIGITAL_GAIN) {
-        GST_ARGUS_PRINT("Invalid ISP Digital Gain Range Input\n");
+        GST_ARGUS_PRINT("Invalid ISP Digital Gain Range Input");
         ret = FALSE;
         goto done;
       }
@@ -1485,11 +1487,11 @@ static gboolean set_range(GstNvArgusCameraSrc* src, guint prop_id) {
       range.high = array[1];
       src->controls.ispDigitalGainRange = range;
     } else {
-      GST_ARGUS_PRINT("NvArgusCameraSrc: property not defined\n");
+      GST_ARGUS_PRINT("NvArgusCameraSrc: property not defined");
       return FALSE;
     }
   } else {
-    GST_ARGUS_PRINT("Need two values to set range\n");
+    GST_ARGUS_PRINT("Need two values to set range");
     ret = FALSE;
     goto done;
   }
@@ -1578,9 +1580,9 @@ static void gst_nv_argus_camera_src_class_init(
       gobject_class, PROP_EXPOSURE_TIME_RANGE,
       g_param_spec_string(
           "exposuretimerange", "Exposure Time Range",
-          "Property to adjust exposure time range in nanoseconds\n"
-          "\t\t\tUse string with values of Exposure Time Range (low, high)\n"
-          "\t\t\tin that order, to set the property.\n"
+          "Property to adjust exposure time range in nanoseconds"
+          "\t\t\tUse string with values of Exposure Time Range (low, high)"
+          "\t\t\tin that order, to set the property."
           "\t\t\teg: exposuretimerange=\"34000 358733000\"",
           NVARGUSCAM_DEFAULT_EXPOSURE_TIME,
           (GParamFlags)(G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS)));
@@ -1589,9 +1591,9 @@ static void gst_nv_argus_camera_src_class_init(
       gobject_class, PROP_GAIN_RANGE,
       g_param_spec_string(
           "gainrange", "Gain Range",
-          "Property to adjust gain range\n"
-          "\t\t\tUse string with values of Gain Time Range (low, high)\n"
-          "\t\t\tin that order, to set the property.\n"
+          "Property to adjust gain range"
+          "\t\t\tUse string with values of Gain Time Range (low, high)"
+          "\t\t\tin that order, to set the property."
           "\t\t\teg: gainrange=\"1 16\"",
           NVARGUSCAM_DEFAULT_GAIN_RANGE,
           (GParamFlags)(G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS)));
@@ -1600,9 +1602,9 @@ static void gst_nv_argus_camera_src_class_init(
       gobject_class, PROP_DIGITAL_GAIN_RANGE,
       g_param_spec_string(
           "ispdigitalgainrange", "ISP Digital Gain Range",
-          "Property to adjust digital gain range\n"
-          "\t\t\tUse string with values of ISP Digital Gain Range (low, high)\n"
-          "\t\t\tin that order, to set the property.\n"
+          "Property to adjust digital gain range"
+          "\t\t\tUse string with values of ISP Digital Gain Range (low, high)"
+          "\t\t\tin that order, to set the property."
           "\t\t\teg: ispdigitalgainrange=\"1 8\"",
           NVARGUSCAM_DEFAULT_GAIN_RANGE,
           (GParamFlags)(G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS)));

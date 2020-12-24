@@ -37,17 +37,11 @@
 #include <gst/base/gstbasesrc.h>
 #include <gst/gst.h>
 
-GST_DEBUG_CATEGORY_STATIC(gst_nv_argus_camera_src_debug);
-#define GST_CAT_DEFAULT gst_nv_argus_camera_src_debug
-
 static gboolean nvarguscamerasrc_init(GstPlugin* nvarguscamerasrc) {
   /* debug category for fltering log messages
    *
    * exchange the string 'Template nvarguscamerasrc' with your description
    */
-  GST_DEBUG_CATEGORY_INIT(gst_nv_argus_camera_src_debug, "nvarguscamerasrc", 0,
-                          "nvarguscamerasrc");
-
   return gst_element_register(nvarguscamerasrc, "nvarguscamerasrc",
                               GST_RANK_PRIMARY, GST_TYPE_NVARGUSCAMERASRC);
 }
