@@ -33,19 +33,19 @@ GType gst_nvarguscam_white_balance_mode_get_type(void)
 {
   static gsize white_balance_type = 0;
   static const GEnumValue white_balance_mode[] = {
-      {NvArgusCamAwbMode_Off, "GST_NVCAM_WB_MODE_OFF", "off"},
-      {NvArgusCamAwbMode_Auto, "GST_NVCAM_WB_MODE_AUTO", "auto"},
-      {NvArgusCamAwbMode_Incandescent, "GST_NVCAM_WB_MODE_INCANDESCENT",
+      {NvArgusCamAwbMode_Off, "auto white balance off", "off"},
+      {NvArgusCamAwbMode_Auto, "auto white balance on", "auto"},
+      {NvArgusCamAwbMode_Incandescent, "incandescent white balance preset",
        "incandescent"},
-      {NvArgusCamAwbMode_Fluorescent, "GST_NVCAM_WB_MODE_FLUORESCENT", "fluorescent"},
-      {NvArgusCamAwbMode_WarmFluorescent, "GST_NVCAM_WB_MODE_WARM_FLUORESCENT",
+      {NvArgusCamAwbMode_Fluorescent, "fluorescent white balance preset", "fluorescent"},
+      {NvArgusCamAwbMode_WarmFluorescent, "warm-fluorescent white balance preset",
        "warm-fluorescent"},
-      {NvArgusCamAwbMode_Daylight, "GST_NVCAM_WB_MODE_DAYLIGHT", "daylight"},
-      {NvArgusCamAwbMode_CloudyDaylight, "GST_NVCAM_WB_MODE_CLOUDY_DAYLIGHT",
+      {NvArgusCamAwbMode_Daylight, "foo white balance preset", "daylight"},
+      {NvArgusCamAwbMode_CloudyDaylight, "cloudy-daylight white balance preset",
        "cloudy-daylight"},
-      {NvArgusCamAwbMode_Twilight, "GST_NVCAM_WB_MODE_TWILIGHT", "twilight"},
-      {NvArgusCamAwbMode_Shade, "GST_NVCAM_WB_MODE_SHADE", "shade"},
-      {NvArgusCamAwbMode_Manual, "GST_NVCAM_WB_MODE_MANUAL", "manual"},
+      {NvArgusCamAwbMode_Twilight, "twilight white balance preset", "twilight"},
+      {NvArgusCamAwbMode_Shade, "shade white balance preset", "shade"},
+      {NvArgusCamAwbMode_Manual, "manual white balance preset", "manual"},
       {0, NULL, NULL}};
 
   if (g_once_init_enter(&white_balance_type))
@@ -61,9 +61,9 @@ GType gst_nvarguscam_tnr_mode_get_type(void)
 {
   static gsize tnr_type = 0;
   static const GEnumValue tnr_mode[] = {
-      {NvArgusCamNoiseReductionMode_Off, "GST_NVCAM_NR_OFF", "NoiseReduction_Off"},
-      {NvArgusCamNoiseReductionMode_Fast, "GST_NVCAM_NR_FAST", "NoiseReduction_Fast"},
-      {NvArgusCamNoiseReductionMode_HighQuality, "GST_NVCAM_NR_HIGHQUALITY", "NoiseReduction_HighQuality"},
+      {NvArgusCamNoiseReductionMode_Off, "Noise reduction off", "off"},
+      {NvArgusCamNoiseReductionMode_Fast, "Fast noise reduction", "fast"},
+      {NvArgusCamNoiseReductionMode_HighQuality, "HQ noise reduction", "hq"},
       {0, NULL, NULL}};
 
   if (g_once_init_enter(&tnr_type))
@@ -78,9 +78,9 @@ GType gst_nvarguscam_edge_enhancement_mode_get_type(void)
 {
   static gsize edge_enhancement_type = 0;
   static const GEnumValue edge_enhancement_mode[] = {
-      {NvArgusCamEdgeEnhancementMode_Off, "GST_NVCAM_EE_OFF", "EdgeEnhancement_Off"},
-      {NvArgusCamEdgeEnhancementMode_Fast, "GST_NVCAM_EE_FAST", "EdgeEnhancement_Fast"},
-      {NvArgusCamEdgeEnhancementMode_HighQuality, "GST_NVCAM_EE_HIGHQUALITY", "EdgeEnhancement_HighQuality"},
+      {NvArgusCamEdgeEnhancementMode_Off, "Edge enhancement off", "off"},
+      {NvArgusCamEdgeEnhancementMode_Fast, "Fast edge enhancement", "fast"},
+      {NvArgusCamEdgeEnhancementMode_HighQuality, "HQ edge enhancement", "hq"},
       {0, NULL, NULL}};
 
   if (g_once_init_enter(&edge_enhancement_type))
@@ -95,10 +95,10 @@ GType gst_nvarguscam_aeantibanding_mode_get_type(void)
 {
   static gsize aeantibanding_type = 0;
   static const GEnumValue aeantibanding_mode[] = {
-      {NvArgusCamAeAntibandingMode_Off, "GST_NVCAM_AEANTIBANDING_OFF", "AeAntibandingMode_Off"},
-      {NvArgusCamAeAntibandingMode_Auto, "GST_NVCAM_AEANTIBANDING_AUTO", "AeAntibandingMode_Auto"},
-      {NvArgusCamAeAntibandingMode_50HZ, "GST_NVCAM_AEANTIBANDING_50HZ", "AeAntibandingMode_50HZ"},
-      {NvArgusCamAeAntibandingMode_60HZ, "GST_NVCAM_AEANTIBANDING_60HZ", "AeAntibandingMode_60HZ"},
+      {NvArgusCamAeAntibandingMode_Off, "Anti-banding off", "off"},
+      {NvArgusCamAeAntibandingMode_Auto, "Automatic anti-banding", "auto"},
+      {NvArgusCamAeAntibandingMode_50HZ, "50hz anti-banding", "50hz"},
+      {NvArgusCamAeAntibandingMode_60HZ, "60hz anti-banding", "60hz"},
       {0, NULL, NULL}};
 
   if (g_once_init_enter(&aeantibanding_type))
