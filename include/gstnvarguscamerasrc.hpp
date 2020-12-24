@@ -30,11 +30,14 @@
 #define __GST_NVARGUSCAMERASRC_H__
 
 #include <gst/gst.h>
+#include <gst/base/gstbasesrc.h>
 
 #include "nvbufsurface.h"
 #include "nvbuf_utils.h"
 #include "gstnvarguscamera_utils.h"
 #include "gstnvdsbufferpool.h"
+
+#include "Ordered.h"
 
 G_BEGIN_DECLS
 
@@ -42,13 +45,15 @@ G_BEGIN_DECLS
 #define GST_TYPE_NVARGUSCAMERASRC \
   (gst_nv_argus_camera_src_get_type())
 #define GST_NVARGUSCAMERASRC(obj) \
-  (G_TYPE_CHECK_INSTANCE_CAST((obj),GST_TYPE_NVARGUSCAMERASRC,GstNvArgusCameraSrc))
+  (G_TYPE_CHECK_INSTANCE_CAST((obj), GST_TYPE_NVARGUSCAMERASRC, GstNvArgusCameraSrc))
 #define GST_NVARGUSCAMERASRC_CLASS(klass) \
-  (G_TYPE_CHECK_CLASS_CAST((klass),GST_TYPE_NVARGUSCAMERASRC,GstNvArgusCameraSrcClass))
+  (G_TYPE_CHECK_CLASS_CAST((klass), GST_TYPE_NVARGUSCAMERASRC, GstNvArgusCameraSrcClass))
 #define GST_IS_NVARGUSCAMERASRC(obj) \
-  (G_TYPE_CHECK_INSTANCE_TYPE((obj),GST_TYPE_NVARGUSCAMERASRC))
+  (G_TYPE_CHECK_INSTANCE_TYPE((obj), GST_TYPE_NVARGUSCAMERASRC))
 #define GST_IS_NVARGUSCAMERASRC_CLASS(klass) \
-  (G_TYPE_CHECK_CLASS_TYPE((klass),GST_TYPE_NVARGUSCAMERASRC))
+  (G_TYPE_CHECK_CLASS_TYPE((klass), GST_TYPE_NVARGUSCAMERASRC))
+
+// clang-format off
 
 #define NVARGUSCAM_DEFAULT_WB_MODE                   NvArgusCamAwbMode_Auto
 #define NVARGUSCAM_DEFAULT_SATURATION                1.0
@@ -67,7 +72,9 @@ G_BEGIN_DECLS
 #define NVARGUSCAM_DEFAULT_AE_LOCK                   FALSE
 #define NVARGUSCAM_DEFAULT_AWB_LOCK                  FALSE
 
-typedef struct _GstNvArgusCameraSrc      GstNvArgusCameraSrc;
+// clang-format on
+
+typedef struct _GstNvArgusCameraSrc GstNvArgusCameraSrc;
 typedef struct _GstNvArgusCameraSrcClass GstNvArgusCameraSrcClass;
 
 typedef struct _GstNvArgusCameraSrcBuffer GstNvArgusCameraSrcBuffer;
@@ -193,75 +200,75 @@ struct _GstNvArgusCameraSrcClass
   GstBaseSrcClass base_nvarguscamera_class;
 };
 
-GType gst_nv_argus_camera_src_get_type (void);
+GType gst_nv_argus_camera_src_get_type(void);
 
 namespace ArgusSamples
 {
 
-/**
+  /**
  * Base class for threads. Derived classes need to implement 'threadInitialize', 'threadExecute'
  * and 'threadShutdown'. This class handles the transition between the thread states.
  */
-class ThreadArgus
-{
-public:
-  ThreadArgus();
-  virtual ~ThreadArgus();
+  class ThreadArgus
+  {
+  public:
+    ThreadArgus();
+    virtual ~ThreadArgus();
 
-  /**
+    /**
    * Initialize
    */
-  bool initialize(GstNvArgusCameraSrc *);
-  /**
+    bool initialize(GstNvArgusCameraSrc *);
+    /**
    * Shutdown
    */
-  bool shutdown();
+    bool shutdown();
 
-  /**
+    /**
    * Wait until the thread is in 'running' state
    *
    * @param timeout [in] timeout in us
    */
-  bool waitRunning(useconds_t timeoutUs = 5 * 1000 * 1000);
+    bool waitRunning(useconds_t timeoutUs = 5 * 1000 * 1000);
 
-  GstNvArgusCameraSrc *src;
+    GstNvArgusCameraSrc *src;
 
-protected:
-  virtual bool threadInitialize(GstNvArgusCameraSrc *) = 0;
-  virtual bool threadExecute(GstNvArgusCameraSrc *) = 0;
-  virtual bool threadShutdown(GstNvArgusCameraSrc *) = 0;
+  protected:
+    virtual bool threadInitialize(GstNvArgusCameraSrc *) = 0;
+    virtual bool threadExecute(GstNvArgusCameraSrc *) = 0;
+    virtual bool threadShutdown(GstNvArgusCameraSrc *) = 0;
 
-  /**
+    /**
    * Request thread shutdown
    */
-  bool requestShutdown()
-  {
-    m_doShutdown = true;
-    return true;
-  }
+    bool requestShutdown()
+    {
+      m_doShutdown = true;
+      return true;
+    }
 
-  Ordered<bool> m_doShutdown; ///< set to request shutdown of the thread
+    Ordered<bool> m_doShutdown; ///< set to request shutdown of the thread
 
-private:
-  pthread_t m_threadID;       ///< thread ID
+  private:
+    pthread_t m_threadID; ///< thread ID
 
-  /**
+    /**
    * Thread states
    */
-  enum ThreadState
-  {
-    THREAD_INACTIVE,        ///< is inactive
-    THREAD_INITIALIZING,    ///< is initializing
-    THREAD_RUNNING,         ///< is running
-    THREAD_FAILED,          ///< has failed
-    THREAD_DONE,            ///< execution done
+    enum ThreadState
+    {
+      THREAD_INACTIVE,     ///< is inactive
+      THREAD_INITIALIZING, ///< is initializing
+      THREAD_RUNNING,      ///< is running
+      THREAD_FAILED,       ///< has failed
+      THREAD_DONE,         ///< execution done
+    };
+    Ordered<ThreadState> m_threadState;
+
+    bool threadFunction(GstNvArgusCameraSrc *);
+
+    static void *threadFunctionStub(void *dataPtr);
   };
-  Ordered<ThreadState> m_threadState;
-
-  bool threadFunction(GstNvArgusCameraSrc *);
-
-  static void *threadFunctionStub(void *dataPtr);
-};
 
 } // namespace ArgusSamples
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2020, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2017-2020, NVIDIA CORPORATION. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,41 +26,49 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef GSTNVDSBUFFERPOOL_H_
-#define GSTNVDSBUFFERPOOL_H_
+/* entry point to initialize the plug-in
+ * initialize the plug-in itself
+ * register the element factories and other features
+ */
+
+#include "gstnvarguscamera_config.h"
+#include "gstnvarguscamerasrc.hpp"
 
 #include <gst/gst.h>
+#include <gst/base/gstbasesrc.h>
 
-G_BEGIN_DECLS
+GST_DEBUG_CATEGORY_STATIC(gst_nv_argus_camera_src_debug);
+#define GST_CAT_DEFAULT gst_nv_argus_camera_src_debug
 
-typedef struct _GstNvDsBufferPool GstNvDsBufferPool;
-typedef struct _GstNvDsBufferPoolClass GstNvDsBufferPoolClass;
-typedef struct _GstNvDsBufferPoolPrivate GstNvDsBufferPoolPrivate;
-
-#define GST_TYPE_NVDS_BUFFER_POOL (gst_nvds_buffer_pool_get_type())
-#define GST_IS_NVDS_BUFFER_POOL(obj) (G_TYPE_CHECK_INSTANCE_TYPE((obj), GST_TYPE_NVDS_BUFFER_POOL))
-#define GST_NVDS_BUFFER_POOL(obj) (G_TYPE_CHECK_INSTANCE_CAST((obj), GST_TYPE_NVDS_BUFFER_POOL, GstNvDsBufferPool))
-#define GST_NVDS_BUFFER_POOL_CAST(obj) ((GstNvDsBufferPool *)(obj))
-
-#define GST_NVDS_MEMORY_TYPE "nvds"
-#define GST_BUFFER_POOL_OPTION_NVDS_META "GstBufferPoolOptionNvDsMeta"
-
-struct _GstNvDsBufferPool
+static gboolean
+nvarguscamerasrc_init(GstPlugin *nvarguscamerasrc)
 {
-  GstBufferPool bufferpool;
+    /* debug category for fltering log messages
+   *
+   * exchange the string 'Template nvarguscamerasrc' with your description
+   */
+    GST_DEBUG_CATEGORY_INIT(gst_nv_argus_camera_src_debug, "nvarguscamerasrc",
+                            0, "nvarguscamerasrc");
 
-  GstNvDsBufferPoolPrivate *priv;
-};
+    return gst_element_register(nvarguscamerasrc, "nvarguscamerasrc", GST_RANK_PRIMARY,
+                                GST_TYPE_NVARGUSCAMERASRC);
+}
 
-struct _GstNvDsBufferPoolClass
-{
-  GstBufferPoolClass parent_class;
-};
-
-GType gst_nvds_buffer_pool_get_type(void);
-
-GstBufferPool *gst_nvds_buffer_pool_new(void);
-
-G_END_DECLS
-
-#endif /* GSTNVDSBUFFERPOOL_H_ */
+/* gstreamer looks for this structure to register nvarguscamerasrcs
+ *
+ * to change this:
+ *  * Gnu Make: modify include/gstnvarguscamera_config_make.h
+ *  * Meson: change the VERSION file to set the version and the root meson.build
+ *    for the rest.
+ * 
+ */
+GST_PLUGIN_DEFINE(
+    GST_VERSION_MAJOR,
+    GST_VERSION_MINOR,
+    nvarguscamerasrc,
+    PROJ_DESCRIPTION,
+    nvarguscamerasrc_init,
+    PROJ_VER,
+    LICENSE,
+    BINARY_PACKAGE,
+    PROJ_URL)
