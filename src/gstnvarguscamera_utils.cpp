@@ -29,17 +29,17 @@
 #include "gstnvarguscamera_utils.h"
 #include <string.h>
 
-GType gst_nvarguscam_white_balance_mode_get_type(void)
-{
+GType gst_nvarguscam_white_balance_mode_get_type(void) {
   static gsize white_balance_type = 0;
   static const GEnumValue white_balance_mode[] = {
       {NvArgusCamAwbMode_Off, "auto white balance off", "off"},
       {NvArgusCamAwbMode_Auto, "auto white balance on", "auto"},
       {NvArgusCamAwbMode_Incandescent, "incandescent white balance preset",
        "incandescent"},
-      {NvArgusCamAwbMode_Fluorescent, "fluorescent white balance preset", "fluorescent"},
-      {NvArgusCamAwbMode_WarmFluorescent, "warm-fluorescent white balance preset",
-       "warm-fluorescent"},
+      {NvArgusCamAwbMode_Fluorescent, "fluorescent white balance preset",
+       "fluorescent"},
+      {NvArgusCamAwbMode_WarmFluorescent,
+       "warm-fluorescent white balance preset", "warm-fluorescent"},
       {NvArgusCamAwbMode_Daylight, "foo white balance preset", "daylight"},
       {NvArgusCamAwbMode_CloudyDaylight, "cloudy-daylight white balance preset",
        "cloudy-daylight"},
@@ -48,17 +48,16 @@ GType gst_nvarguscam_white_balance_mode_get_type(void)
       {NvArgusCamAwbMode_Manual, "manual white balance preset", "manual"},
       {0, NULL, NULL}};
 
-  if (g_once_init_enter(&white_balance_type))
-  {
-    GType tmp = g_enum_register_static("GstNvArgusCamWBMode", white_balance_mode);
+  if (g_once_init_enter(&white_balance_type)) {
+    GType tmp =
+        g_enum_register_static("GstNvArgusCamWBMode", white_balance_mode);
     g_once_init_leave(&white_balance_type, tmp);
   }
 
   return (GType)white_balance_type;
 }
 
-GType gst_nvarguscam_tnr_mode_get_type(void)
-{
+GType gst_nvarguscam_tnr_mode_get_type(void) {
   static gsize tnr_type = 0;
   static const GEnumValue tnr_mode[] = {
       {NvArgusCamNoiseReductionMode_Off, "Noise reduction off", "off"},
@@ -66,16 +65,14 @@ GType gst_nvarguscam_tnr_mode_get_type(void)
       {NvArgusCamNoiseReductionMode_HighQuality, "HQ noise reduction", "hq"},
       {0, NULL, NULL}};
 
-  if (g_once_init_enter(&tnr_type))
-  {
+  if (g_once_init_enter(&tnr_type)) {
     GType tmp = g_enum_register_static("GstNvArgusCamTNRMode", tnr_mode);
     g_once_init_leave(&tnr_type, tmp);
   }
   return (GType)tnr_type;
 }
 
-GType gst_nvarguscam_edge_enhancement_mode_get_type(void)
-{
+GType gst_nvarguscam_edge_enhancement_mode_get_type(void) {
   static gsize edge_enhancement_type = 0;
   static const GEnumValue edge_enhancement_mode[] = {
       {NvArgusCamEdgeEnhancementMode_Off, "Edge enhancement off", "off"},
@@ -83,16 +80,15 @@ GType gst_nvarguscam_edge_enhancement_mode_get_type(void)
       {NvArgusCamEdgeEnhancementMode_HighQuality, "HQ edge enhancement", "hq"},
       {0, NULL, NULL}};
 
-  if (g_once_init_enter(&edge_enhancement_type))
-  {
-    GType tmp = g_enum_register_static("GstNvArgusCamEEMode", edge_enhancement_mode);
+  if (g_once_init_enter(&edge_enhancement_type)) {
+    GType tmp =
+        g_enum_register_static("GstNvArgusCamEEMode", edge_enhancement_mode);
     g_once_init_leave(&edge_enhancement_type, tmp);
   }
   return (GType)edge_enhancement_type;
 }
 
-GType gst_nvarguscam_aeantibanding_mode_get_type(void)
-{
+GType gst_nvarguscam_aeantibanding_mode_get_type(void) {
   static gsize aeantibanding_type = 0;
   static const GEnumValue aeantibanding_mode[] = {
       {NvArgusCamAeAntibandingMode_Off, "Anti-banding off", "off"},
@@ -101,9 +97,9 @@ GType gst_nvarguscam_aeantibanding_mode_get_type(void)
       {NvArgusCamAeAntibandingMode_60HZ, "60hz anti-banding", "60hz"},
       {0, NULL, NULL}};
 
-  if (g_once_init_enter(&aeantibanding_type))
-  {
-    GType tmp = g_enum_register_static("GstNvArgusCamAeAntiBandingMode", aeantibanding_mode);
+  if (g_once_init_enter(&aeantibanding_type)) {
+    GType tmp = g_enum_register_static("GstNvArgusCamAeAntiBandingMode",
+                                       aeantibanding_mode);
     g_once_init_leave(&aeantibanding_type, tmp);
   }
   return (GType)aeantibanding_type;

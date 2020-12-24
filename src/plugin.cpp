@@ -34,24 +34,22 @@
 #include "gstnvarguscamera_config.h"
 #include "gstnvarguscamerasrc.hpp"
 
-#include <gst/gst.h>
 #include <gst/base/gstbasesrc.h>
+#include <gst/gst.h>
 
 GST_DEBUG_CATEGORY_STATIC(gst_nv_argus_camera_src_debug);
 #define GST_CAT_DEFAULT gst_nv_argus_camera_src_debug
 
-static gboolean
-nvarguscamerasrc_init(GstPlugin *nvarguscamerasrc)
-{
-    /* debug category for fltering log messages
+static gboolean nvarguscamerasrc_init(GstPlugin* nvarguscamerasrc) {
+  /* debug category for fltering log messages
    *
    * exchange the string 'Template nvarguscamerasrc' with your description
    */
-    GST_DEBUG_CATEGORY_INIT(gst_nv_argus_camera_src_debug, "nvarguscamerasrc",
-                            0, "nvarguscamerasrc");
+  GST_DEBUG_CATEGORY_INIT(gst_nv_argus_camera_src_debug, "nvarguscamerasrc", 0,
+                          "nvarguscamerasrc");
 
-    return gst_element_register(nvarguscamerasrc, "nvarguscamerasrc", GST_RANK_PRIMARY,
-                                GST_TYPE_NVARGUSCAMERASRC);
+  return gst_element_register(nvarguscamerasrc, "nvarguscamerasrc",
+                              GST_RANK_PRIMARY, GST_TYPE_NVARGUSCAMERASRC);
 }
 
 /* gstreamer looks for this structure to register nvarguscamerasrcs
@@ -60,15 +58,14 @@ nvarguscamerasrc_init(GstPlugin *nvarguscamerasrc)
  *  * Gnu Make: modify include/gstnvarguscamera_config_make.h
  *  * Meson: change the VERSION file to set the version and the root meson.build
  *    for the rest.
- * 
+ *
  */
-GST_PLUGIN_DEFINE(
-    GST_VERSION_MAJOR,
-    GST_VERSION_MINOR,
-    nvarguscamerasrc,
-    PROJ_DESCRIPTION,
-    nvarguscamerasrc_init,
-    PROJ_VER,
-    LICENSE,
-    BINARY_PACKAGE,
-    PROJ_URL)
+GST_PLUGIN_DEFINE(GST_VERSION_MAJOR,
+                  GST_VERSION_MINOR,
+                  nvarguscamerasrc,
+                  PROJ_DESCRIPTION,
+                  nvarguscamerasrc_init,
+                  PROJ_VER,
+                  LICENSE,
+                  BINARY_PACKAGE,
+                  PROJ_URL)

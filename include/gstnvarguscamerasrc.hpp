@@ -29,25 +29,26 @@
 #ifndef __GST_NVARGUSCAMERASRC_H__
 #define __GST_NVARGUSCAMERASRC_H__
 
-#include <gst/gst.h>
 #include <gst/base/gstbasesrc.h>
+#include <gst/gst.h>
 
-#include "nvbufsurface.h"
-#include "nvbuf_utils.h"
 #include "gstnvarguscamera_utils.h"
 #include "gstnvdsbufferpool.h"
+#include "nvbuf_utils.h"
+#include "nvbufsurface.h"
 
 #include "Ordered.h"
 
 G_BEGIN_DECLS
 
 /* #defines don't like whitespacey bits */
-#define GST_TYPE_NVARGUSCAMERASRC \
-  (gst_nv_argus_camera_src_get_type())
-#define GST_NVARGUSCAMERASRC(obj) \
-  (G_TYPE_CHECK_INSTANCE_CAST((obj), GST_TYPE_NVARGUSCAMERASRC, GstNvArgusCameraSrc))
-#define GST_NVARGUSCAMERASRC_CLASS(klass) \
-  (G_TYPE_CHECK_CLASS_CAST((klass), GST_TYPE_NVARGUSCAMERASRC, GstNvArgusCameraSrcClass))
+#define GST_TYPE_NVARGUSCAMERASRC (gst_nv_argus_camera_src_get_type())
+#define GST_NVARGUSCAMERASRC(obj)                               \
+  (G_TYPE_CHECK_INSTANCE_CAST((obj), GST_TYPE_NVARGUSCAMERASRC, \
+                              GstNvArgusCameraSrc))
+#define GST_NVARGUSCAMERASRC_CLASS(klass)                      \
+  (G_TYPE_CHECK_CLASS_CAST((klass), GST_TYPE_NVARGUSCAMERASRC, \
+                           GstNvArgusCameraSrcClass))
 #define GST_IS_NVARGUSCAMERASRC(obj) \
   (G_TYPE_CHECK_INSTANCE_TYPE((obj), GST_TYPE_NVARGUSCAMERASRC))
 #define GST_IS_NVARGUSCAMERASRC_CLASS(klass) \
@@ -79,8 +80,7 @@ typedef struct _GstNvArgusCameraSrcClass GstNvArgusCameraSrcClass;
 
 typedef struct _GstNvArgusCameraSrcBuffer GstNvArgusCameraSrcBuffer;
 
-typedef struct NvArgusCameraRangeRec
-{
+typedef struct NvArgusCameraRangeRec {
   /**  Lower limit for the range. */
   gfloat low;
   /**  Upper limit for the range. */
@@ -88,8 +88,7 @@ typedef struct NvArgusCameraRangeRec
 } NvArgusCameraRange;
 
 /* NvArgusCameraSrc Controls */
-typedef struct NvArgusCamControls
-{
+typedef struct NvArgusCamControls {
   NvArgusCamAwbMode wbmode;
   gfloat saturation;
   NvArgusCameraRange exposureTimeRange;
@@ -105,35 +104,32 @@ typedef struct NvArgusCamControls
   gboolean AwbLock;
 } NvArgusCamControls;
 /* NvArgusCameraSrc buffer */
-struct _GstNvArgusCameraSrcBuffer
-{
+struct _GstNvArgusCameraSrcBuffer {
   gint dmabuf_fd;
   gboolean bufApi;
-  GstBuffer *gst_buf;
-  NvBufSurface *surf;
+  GstBuffer* gst_buf;
+  NvBufSurface* surf;
 };
 
-typedef struct NvArgusFrameInfo
-{
+typedef struct NvArgusFrameInfo {
   gint fd;
   guint64 frameNum;
   guint64 frameTime;
 } NvArgusFrameInfo;
 
-struct _GstNvArgusCameraSrc
-{
+struct _GstNvArgusCameraSrc {
   GstBaseSrc base_nvarguscamera;
 
-  GstPad *srcpad;
+  GstPad* srcpad;
 
-  GThread *consumer_thread;
-  GThread *argus_thread;
+  GThread* consumer_thread;
+  GThread* argus_thread;
 
   gboolean silent;
 
-  GstBufferPool *pool;
+  GstBufferPool* pool;
 
-  GstCaps *outcaps;
+  GstCaps* outcaps;
 
   gint width;
   gint height;
@@ -144,11 +140,11 @@ struct _GstNvArgusCameraSrc
 
   guint total_sensor_modes;
   guint timeout;
-  gchar *exposureTimeString;
-  gchar *gainRangeString;
-  gchar *ispDigitalGainRangeString;
+  gchar* exposureTimeString;
+  gchar* gainRangeString;
+  gchar* ispDigitalGainRangeString;
 
-  GQueue *nvmm_buffers;
+  GQueue* nvmm_buffers;
   GMutex nvmm_buffers_queue_lock;
   GCond nvmm_buffers_queue_cond;
 
@@ -157,7 +153,7 @@ struct _GstNvArgusCameraSrc
 
   NvBufferTransformParams transform_params;
 
-  GQueue *argus_buffers;
+  GQueue* argus_buffers;
   GMutex argus_buffers_queue_lock;
   GCond argus_buffers_queue_cond;
 
@@ -184,93 +180,89 @@ struct _GstNvArgusCameraSrc
   gboolean awbLockPropSet;
   gboolean bufApi;
   gboolean argus_in_error;
-  void *iRequest_ptr;
-  void *iCaptureSession_ptr;
-  void *iAutoControlSettings_ptr;
-  void *request_ptr;
-  void *outRequest_ptr;
-  void *iDenoiseSettings_ptr;
-  void *iEeSettings_ptr;
-  void *iRequestSourceSettings_ptr;
-  NvArgusFrameInfo *frameInfo;
+  void* iRequest_ptr;
+  void* iCaptureSession_ptr;
+  void* iAutoControlSettings_ptr;
+  void* request_ptr;
+  void* outRequest_ptr;
+  void* iDenoiseSettings_ptr;
+  void* iEeSettings_ptr;
+  void* iRequestSourceSettings_ptr;
+  NvArgusFrameInfo* frameInfo;
 };
 
-struct _GstNvArgusCameraSrcClass
-{
+struct _GstNvArgusCameraSrcClass {
   GstBaseSrcClass base_nvarguscamera_class;
 };
 
 GType gst_nv_argus_camera_src_get_type(void);
 
-namespace ArgusSamples
-{
+namespace ArgusSamples {
+
+/**
+ * Base class for threads. Derived classes need to implement 'threadInitialize',
+ * 'threadExecute' and 'threadShutdown'. This class handles the transition
+ * between the thread states.
+ */
+class ThreadArgus {
+ public:
+  ThreadArgus();
+  virtual ~ThreadArgus();
 
   /**
- * Base class for threads. Derived classes need to implement 'threadInitialize', 'threadExecute'
- * and 'threadShutdown'. This class handles the transition between the thread states.
- */
-  class ThreadArgus
-  {
-  public:
-    ThreadArgus();
-    virtual ~ThreadArgus();
-
-    /**
    * Initialize
    */
-    bool initialize(GstNvArgusCameraSrc *);
-    /**
+  bool initialize(GstNvArgusCameraSrc*);
+  /**
    * Shutdown
    */
-    bool shutdown();
+  bool shutdown();
 
-    /**
+  /**
    * Wait until the thread is in 'running' state
    *
    * @param timeout [in] timeout in us
    */
-    bool waitRunning(useconds_t timeoutUs = 5 * 1000 * 1000);
+  bool waitRunning(useconds_t timeoutUs = 5 * 1000 * 1000);
 
-    GstNvArgusCameraSrc *src;
+  GstNvArgusCameraSrc* src;
 
-  protected:
-    virtual bool threadInitialize(GstNvArgusCameraSrc *) = 0;
-    virtual bool threadExecute(GstNvArgusCameraSrc *) = 0;
-    virtual bool threadShutdown(GstNvArgusCameraSrc *) = 0;
+ protected:
+  virtual bool threadInitialize(GstNvArgusCameraSrc*) = 0;
+  virtual bool threadExecute(GstNvArgusCameraSrc*) = 0;
+  virtual bool threadShutdown(GstNvArgusCameraSrc*) = 0;
 
-    /**
+  /**
    * Request thread shutdown
    */
-    bool requestShutdown()
-    {
-      m_doShutdown = true;
-      return true;
-    }
+  bool requestShutdown() {
+    m_doShutdown = true;
+    return true;
+  }
 
-    Ordered<bool> m_doShutdown; ///< set to request shutdown of the thread
+  Ordered<bool> m_doShutdown;  ///< set to request shutdown of the thread
 
-  private:
-    pthread_t m_threadID; ///< thread ID
+ private:
+  pthread_t m_threadID;  ///< thread ID
 
-    /**
+  /**
    * Thread states
    */
-    enum ThreadState
-    {
-      THREAD_INACTIVE,     ///< is inactive
-      THREAD_INITIALIZING, ///< is initializing
-      THREAD_RUNNING,      ///< is running
-      THREAD_FAILED,       ///< has failed
-      THREAD_DONE,         ///< execution done
-    };
-    Ordered<ThreadState> m_threadState;
-
-    bool threadFunction(GstNvArgusCameraSrc *);
-
-    static void *threadFunctionStub(void *dataPtr);
+  enum ThreadState {
+    THREAD_INACTIVE,      ///< is inactive
+    THREAD_INITIALIZING,  ///< is initializing
+    THREAD_RUNNING,       ///< is running
+    THREAD_FAILED,        ///< has failed
+    THREAD_DONE,          ///< execution done
   };
+  Ordered<ThreadState> m_threadState;
 
-} // namespace ArgusSamples
+  bool threadFunction(GstNvArgusCameraSrc*);
+
+  static void* threadFunctionStub(void* dataPtr);
+};
+
+}  // namespace ArgusSamples
 
 G_END_DECLS
 
