@@ -51,6 +51,7 @@ gstnvarguscamearsrc_deps = [
 gstnvarguscameasrc_src = [
   'gstnvarguscamera_utils.cpp',
   'gstnvarguscamerasrc.cpp',
+  'plugin.cpp',
 ]
 
 # set this when you `meson configure` with `-D b_lundef=true`
@@ -65,5 +66,6 @@ libgstnvarguscameasrc = library(meson.project_name(), gstnvarguscameasrc_src,
   ],
   install: true,
   install_dir: gst_install_dir,
+  cpp_args: gstnvarguscamerasrc_cflags,
 #  link_args: ldflags,
 )

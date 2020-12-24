@@ -18,8 +18,29 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 # DEALINGS IN THE SOFTWARE.
 
+# fill out our template from the root meson.build and the VERSION source of
+# truth
+
+#define PROJ_VER "1.0.0"
+#define PROJ_DESCRIPTION "nVidia ARGUS Camera Source"
+#define BINARY_PACKAGE "NvARGUSCameraSrc"
+#define PROJ_URL "https://github.com/mdegans/gst-nvarguscamerasrc"
+#define LICENSE "Proprietary"
+
+gstnvarguscamera_config_meson_h = configure_file(
+  input: 'gstnvarguscamera_config_meson.h.in',
+  output: 'gstnvarguscamera_config_meson.h',
+  configuration: {
+    'proj_ver': meson.project_version(),
+    'proj_description': proj_description,
+    'binary_package': binary_package,
+    'proj_url': proj_url,
+    'license': meson.project_license()[0],
+  },
+)
+
+# this tells our config.h to use our completed template
+gstnvarguscamerasrc_cflags = ['-DMESON']
+
 # a variable pointing to this dir
 gstnvarguscamerasrc_incdir = include_directories('.')
-
-# TODO(mdegans) install these to subdir since some defines are useful in apps
-#  using the argus source.

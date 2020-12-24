@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2020, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2017-2020, NVIDIA CORPORATION. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,41 +26,14 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef GSTNVDSBUFFERPOOL_H_
-#define GSTNVDSBUFFERPOOL_H_
+#ifndef E0CAA875_7EE8_4F6B_9A1C_99C2CF152440
+#define E0CAA875_7EE8_4F6B_9A1C_99C2CF152440
 
-#include <gst/gst.h>
+// If the version is modified, don't forget to change it in the VERSION file
+#define PROJ_VER "1.0.0"
+#define PROJ_DESCRIPTION "nVidia ARGUS Camera Source"
+#define BINARY_PACKAGE "NvARGUSCameraSrc"
+#define PROJ_URL "https://github.com/mdegans/gst-nvarguscamerasrc"
+#define LICENSE "Proprietary"
 
-G_BEGIN_DECLS
-
-typedef struct _GstNvDsBufferPool GstNvDsBufferPool;
-typedef struct _GstNvDsBufferPoolClass GstNvDsBufferPoolClass;
-typedef struct _GstNvDsBufferPoolPrivate GstNvDsBufferPoolPrivate;
-
-#define GST_TYPE_NVDS_BUFFER_POOL (gst_nvds_buffer_pool_get_type())
-#define GST_IS_NVDS_BUFFER_POOL(obj) (G_TYPE_CHECK_INSTANCE_TYPE((obj), GST_TYPE_NVDS_BUFFER_POOL))
-#define GST_NVDS_BUFFER_POOL(obj) (G_TYPE_CHECK_INSTANCE_CAST((obj), GST_TYPE_NVDS_BUFFER_POOL, GstNvDsBufferPool))
-#define GST_NVDS_BUFFER_POOL_CAST(obj) ((GstNvDsBufferPool *)(obj))
-
-#define GST_NVDS_MEMORY_TYPE "nvds"
-#define GST_BUFFER_POOL_OPTION_NVDS_META "GstBufferPoolOptionNvDsMeta"
-
-struct _GstNvDsBufferPool
-{
-  GstBufferPool bufferpool;
-
-  GstNvDsBufferPoolPrivate *priv;
-};
-
-struct _GstNvDsBufferPoolClass
-{
-  GstBufferPoolClass parent_class;
-};
-
-GType gst_nvds_buffer_pool_get_type(void);
-
-GstBufferPool *gst_nvds_buffer_pool_new(void);
-
-G_END_DECLS
-
-#endif /* GSTNVDSBUFFERPOOL_H_ */
+#endif /* E0CAA875_7EE8_4F6B_9A1C_99C2CF152440 */

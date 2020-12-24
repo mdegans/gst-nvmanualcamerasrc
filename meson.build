@@ -42,12 +42,12 @@ proj_ver_short = proj_ver[0] + '.' + proj_ver[1]
 proj_ver_major = proj_ver[0]
 proj_ver_minor = proj_ver[1]
 proj_ver_patch = proj_ver[2]
-# all of this is used by configure_file on config.h.in
-project_description = 'nVidia ARGUS Camera Source'
+# all of this is used by configure_file on gstnvarguscamera_config_meson.h.in
+proj_description = 'nVidia ARGUS Camera Source (meson)'
+proj_url = 'https://github.com/mdegans/gst-nvarguscamerasrc'
 binary_package = 'NvARGUSCameraSrc'
 origin = 'github'
 # change this if you fork this
-project_url = 'https://github.com/mdegans/lib-azabache'
 
 # extra cflags:
 # add_project_arguments(

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2020, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2017-2020, NVIDIA CORPORATION. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,41 +26,22 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef GSTNVDSBUFFERPOOL_H_
-#define GSTNVDSBUFFERPOOL_H_
+#ifndef A6479C9D_8364_49AA_B5B3_889C52B6889D
+#define A6479C9D_8364_49AA_B5B3_889C52B6889D
 
-#include <gst/gst.h>
+/* PACKAGE: this is usually set by autotools depending on some _INIT macro
+ * in configure.ac and then written into and defined in config.h, but we can
+ * just set it ourselves here in case someone doesn't use autotools to
+ * compile this code. GST_PLUGIN_DEFINE needs PACKAGE to be defined.
+ */
+#ifndef PACKAGE
+#define PACKAGE "nvarguscamerasrc"
+#endif
 
-G_BEGIN_DECLS
+#ifdef MESON
+#include "gstnvarguscamera_config_meson.h"
+#else
+#include "gstnvarguscamera_config_make.h"
+#endif
 
-typedef struct _GstNvDsBufferPool GstNvDsBufferPool;
-typedef struct _GstNvDsBufferPoolClass GstNvDsBufferPoolClass;
-typedef struct _GstNvDsBufferPoolPrivate GstNvDsBufferPoolPrivate;
-
-#define GST_TYPE_NVDS_BUFFER_POOL (gst_nvds_buffer_pool_get_type())
-#define GST_IS_NVDS_BUFFER_POOL(obj) (G_TYPE_CHECK_INSTANCE_TYPE((obj), GST_TYPE_NVDS_BUFFER_POOL))
-#define GST_NVDS_BUFFER_POOL(obj) (G_TYPE_CHECK_INSTANCE_CAST((obj), GST_TYPE_NVDS_BUFFER_POOL, GstNvDsBufferPool))
-#define GST_NVDS_BUFFER_POOL_CAST(obj) ((GstNvDsBufferPool *)(obj))
-
-#define GST_NVDS_MEMORY_TYPE "nvds"
-#define GST_BUFFER_POOL_OPTION_NVDS_META "GstBufferPoolOptionNvDsMeta"
-
-struct _GstNvDsBufferPool
-{
-  GstBufferPool bufferpool;
-
-  GstNvDsBufferPoolPrivate *priv;
-};
-
-struct _GstNvDsBufferPoolClass
-{
-  GstBufferPoolClass parent_class;
-};
-
-GType gst_nvds_buffer_pool_get_type(void);
-
-GstBufferPool *gst_nvds_buffer_pool_new(void);
-
-G_END_DECLS
-
-#endif /* GSTNVDSBUFFERPOOL_H_ */
+#endif /* A6479C9D_8364_49AA_B5B3_889C52B6889D */
