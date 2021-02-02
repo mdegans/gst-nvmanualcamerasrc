@@ -72,7 +72,7 @@
 #define MIN_GAIN 1
 #define MAX_GAIN 16
 
-#define MIN_EXPOSURE_TIME 34000
+#define MIN_EXPOSURE_TIME 10000
 #define MAX_EXPOSURE_TIME 358733000
 
 #define MIN_DIGITAL_GAIN 1
@@ -1583,7 +1583,7 @@ static void gst_nv_argus_camera_src_class_init(
           "Property to adjust exposure time range in nanoseconds\n"
           "\t\t\tUse string with values of Exposure Time Range (low, high)\n"
           "\t\t\tin that order, to set the property.\n"
-          "\t\t\teg: exposuretimerange=\"34000 358733000\"",
+          "\t\t\teg: exposuretimerange=\"10000 358733000\"",
           NVARGUSCAM_DEFAULT_EXPOSURE_TIME,
           (GParamFlags)(G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS)));
 
