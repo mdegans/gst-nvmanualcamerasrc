@@ -1580,9 +1580,9 @@ static void gst_nv_argus_camera_src_class_init(
       gobject_class, PROP_EXPOSURE_TIME_RANGE,
       g_param_spec_string(
           "exposuretimerange", "Exposure Time Range",
-          "Property to adjust exposure time range in nanoseconds"
-          "\t\t\tUse string with values of Exposure Time Range (low, high)"
-          "\t\t\tin that order, to set the property."
+          "Property to adjust exposure time range in nanoseconds\n"
+          "\t\t\tUse string with values of Exposure Time Range (low, high)\n"
+          "\t\t\tin that order, to set the property.\n"
           "\t\t\teg: exposuretimerange=\"34000 358733000\"",
           NVARGUSCAM_DEFAULT_EXPOSURE_TIME,
           (GParamFlags)(G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS)));
@@ -1591,9 +1591,9 @@ static void gst_nv_argus_camera_src_class_init(
       gobject_class, PROP_GAIN_RANGE,
       g_param_spec_string(
           "gainrange", "Gain Range",
-          "Property to adjust gain range"
-          "\t\t\tUse string with values of Gain Time Range (low, high)"
-          "\t\t\tin that order, to set the property."
+          "Property to adjust gain range\n"
+          "\t\t\tUse string with values of Gain Time Range (low, high)\n"
+          "\t\t\tin that order, to set the property.\n"
           "\t\t\teg: gainrange=\"1 16\"",
           NVARGUSCAM_DEFAULT_GAIN_RANGE,
           (GParamFlags)(G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS)));
@@ -1602,9 +1602,9 @@ static void gst_nv_argus_camera_src_class_init(
       gobject_class, PROP_DIGITAL_GAIN_RANGE,
       g_param_spec_string(
           "ispdigitalgainrange", "ISP Digital Gain Range",
-          "Property to adjust digital gain range"
-          "\t\t\tUse string with values of ISP Digital Gain Range (low, high)"
-          "\t\t\tin that order, to set the property."
+          "Property to adjust digital gain range\n"
+          "\t\t\tUse string with values of ISP Digital Gain Range (low, high)\n"
+          "\t\t\tin that order, to set the property.\n"
           "\t\t\teg: ispdigitalgainrange=\"1 8\"",
           NVARGUSCAM_DEFAULT_GAIN_RANGE,
           (GParamFlags)(G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS)));
