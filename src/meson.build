@@ -32,7 +32,7 @@ mmapi_incdirs = [
 ]
 
 # a list of our dependencies
-gstnvarguscamearsrc_deps = [
+gstnvmanualcamearsrc_deps = [
   gst_dep,
   dependency('gstreamer-base-1.0'),
   dependency('gstreamer-video-1.0'),
@@ -48,9 +48,9 @@ gstnvarguscamearsrc_deps = [
 ]
 
 # a list of source files (globbing is verboten!)
-gstnvarguscameasrc_src = [
-  'gstnvarguscamera_utils.cpp',
-  'gstnvarguscamerasrc.cpp',
+gstnvmanualcameasrc_src = [
+  'gstnvmanualcamera_utils.cpp',
+  'gstnvmanualcamerasrc.cpp',
   'plugin.cpp',
 ]
 
@@ -58,14 +58,14 @@ gstnvarguscameasrc_src = [
 # ldflags = ['-Wl,--no-undefined']
 
 # our library target
-libgstnvarguscameasrc = library(meson.project_name(), gstnvarguscameasrc_src,
-  dependencies: gstnvarguscamearsrc_deps,
+libgstnvmanualcameasrc = library(meson.project_name(), gstnvmanualcameasrc_src,
+  dependencies: gstnvmanualcamearsrc_deps,
   include_directories: [
-    gstnvarguscamerasrc_incdir,
+    gstnvmanualcamerasrc_incdir,
     mmapi_incdirs,
   ],
   install: true,
   install_dir: gst_install_dir,
-  cpp_args: gstnvarguscamerasrc_cflags,
+  cpp_args: gstnvmanualcamerasrc_cflags,
 #  link_args: ldflags,
 )

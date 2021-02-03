@@ -35,13 +35,13 @@
  * compile this code. GST_PLUGIN_DEFINE needs PACKAGE to be defined.
  */
 #ifndef PACKAGE
-#define PACKAGE "nvarguscamerasrc"
+#define PACKAGE "nvmanualcamerasrc"
 #endif
 
 #ifdef MESON
-#include "gstnvarguscamera_config_meson.h"
+#include "gstnvmanualcamera_config_meson.h"
 #else
-#include "gstnvarguscamera_config_make.h"
+#include "gstnvmanualcamera_config_make.h"
 #endif
 
 #endif /* A6479C9D_8364_49AA_B5B3_889C52B6889D */

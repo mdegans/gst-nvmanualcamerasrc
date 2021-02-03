@@ -19,7 +19,7 @@
 # DEALINGS IN THE SOFTWARE.
 
 # setup the project's global options
-project('gstnvarguscamerasrc', ['cpp'],
+project('gstnvmanualcamerasrc', ['cpp'],
   version: run_command(
     'head', '-n', '1', files('VERSION'),
   ).stdout().strip(),
@@ -42,10 +42,10 @@ proj_ver_short = proj_ver[0] + '.' + proj_ver[1]
 proj_ver_major = proj_ver[0]
 proj_ver_minor = proj_ver[1]
 proj_ver_patch = proj_ver[2]
-# all of this is used by configure_file on gstnvarguscamera_config_meson.h.in
-proj_description = 'nVidia ARGUS Camera Source (meson)'
-proj_url = 'https://github.com/mdegans/gst-nvarguscamerasrc'
-binary_package = 'NvARGUSCameraSrc'
+# all of this is used by configure_file on gstnvmanualcamera_config_meson.h.in
+proj_description = 'nVidia MANUAL Camera Source (meson)'
+proj_url = 'https://github.com/mdegans/gst-nvmanualcamerasrc'
+binary_package = 'NvMANUALCameraSrc'
 origin = 'github'
 # change this if you fork this
 
