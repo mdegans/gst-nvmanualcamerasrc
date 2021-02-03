@@ -1799,12 +1799,15 @@ static void gst_nv_manual_camera_src_set_property(GObject* object,
       src->controls.exposure_time = g_value_get_float(value);
       src->controls.exposure_real =
           src->controls.exposure_time * src->frame_duration;
+      src->exposureTimePropSet = true;
       break;
     case PROP_GAIN:
       src->controls.gain = g_value_get_float(value);
+      src->gainPropSet = true;
       break;
     case PROP_DIGITAL_GAIN:
       src->controls.digital_gain = g_value_get_float(value);
+      src->ispDigitalGainPropSet = true;
       break;
     case PROP_TNR_STRENGTH:
       src->controls.NoiseReductionStrength = g_value_get_float(value);
