@@ -29,15 +29,16 @@
 #ifndef A96C5A45_3E9B_445B_B3AD_E5A1F2FA13C8
 #define A96C5A45_3E9B_445B_B3AD_E5A1F2FA13C8
 
-#include <gst/base/gstbasesrc.h>
-#include <gst/gst.h>
-
 #include "gstnvdsbufferpool.h"
 #include "gstnvmanualcamera_utils.h"
 #include "nvbuf_utils.h"
 #include "nvbufsurface.h"
 
 #include "Ordered.h"
+
+#include <gst/base/gstbasesrc.h>
+#include <gst/gst.h>
+#include <gst/video/video.h>
 
 G_BEGIN_DECLS
 
@@ -54,55 +55,50 @@ G_BEGIN_DECLS
 #define GST_IS_NVMANUALCAMERASRC_CLASS(klass) \
   (G_TYPE_CHECK_CLASS_TYPE((klass), GST_TYPE_NVMANUALCAMERASRC))
 
-// clang-format off
+namespace nvmanualcam::defaults {
 
-#define NVMANUALCAM_DEFAULT_WB_MODE                   NvManualCamAwbMode_Auto
-#define NVMANUALCAM_DEFAULT_SATURATION                1.0
-#define NVMANUALCAM_DEFAULT_EXPOSURE_TIME             "10000 358733000"
-#define NVMANUALCAM_DEFAULT_SENSOR_ID                 0
-#define NVMANUALCAM_DEFAULT_SENSOR_MODE_STATE         -1
-#define NVMANUALCAM_DEFAULT_TOTAL_SENSOR_MODES        0
-#define NVMANUALCAM_DEFAULT_GAIN_RANGE                "1 16"
-#define NVMANUALCAM_DEFAULT_DIGITAL_GAIN_RANGE        "1 256"
-#define NVMANUALCAM_DEFAULT_TNR_MODE                  NvManualCamNoiseReductionMode_Fast
-#define NVMANUALCAM_DEFAULT_TNR_STRENGTH              -1.0
-#define NVMANUALCAM_DEFAULT_EE_MODE                   NvManualCamEdgeEnhancementMode_Fast
-#define NVMANUALCAM_DEFAULT_EE_STRENGTH               -1.0
-#define NVMANUALCAM_DEFAULT_AEANTIBANDING_MODE        NvManualCamAeAntibandingMode_Auto
-#define NVMANUALCAM_DEFAULT_EXP_COMPENSATION          0.0
-#define NVMANUALCAM_DEFAULT_AE_LOCK                   FALSE
-#define NVMANUALCAM_DEFAULT_AWB_LOCK                  FALSE
+const auto WB_MODE = NvManualCamAwbMode_Auto;
+const float SATURATION = 1.0;
+const float EXPOSURE_TIME = 1.0;
+const uint SENSOR_ID = 0;
+const int SENSOR_MODE_STATE = -1;
+const uint TOTAL_SENSOR_MODES = 0;
+const float GAIN = 1.0f;
+const float DIGITAL_GAIN = 1.0f;
+const auto TNR_MODE = NvManualCamNoiseReductionMode_Fast;
+const float TNR_STRENGTH = -1.0;
+const auto EE_MODE = NvManualCamEdgeEnhancementMode_Fast;
+const float EE_STRENGTH = -1.0;
+const auto AEANTIBANDING_MODE = NvManualCamAeAntibandingMode_Auto;
+const float EXP_COMPENSATION = 0.0;
+const bool AE_LOCK = false;
+const bool AWB_LOCK = false;
 
-// clang-format on
+}  // namespace nvmanualcam::defaults
 
 typedef struct _GstNvManualCameraSrc GstNvManualCameraSrc;
 typedef struct _GstNvManualCameraSrcClass GstNvManualCameraSrcClass;
 
 typedef struct _GstNvManualCameraSrcBuffer GstNvManualCameraSrcBuffer;
 
-typedef struct NvManualCameraRangeRec {
-  /**  Lower limit for the range. */
-  gfloat low;
-  /**  Upper limit for the range. */
-  gfloat high;
-} NvManualCameraRange;
-
 /* NvManualCameraSrc Controls */
 typedef struct NvManualCamControls {
   NvManualCamAwbMode wbmode;
-  gfloat saturation;
-  NvManualCameraRange exposureTimeRange;
-  NvManualCameraRange gainRange;
-  NvManualCameraRange ispDigitalGainRange;
+  float saturation;
+  float exposure_time;     // in frames
+  uint64_t exposure_real;  // in nanoseconds
+  float gain;              // min: 1, max: 16
+  float digital_gain;      // min 1, max: 256
   NvManualCamNoiseReductionMode NoiseReductionMode;
   NvManualCamEdgeEnhancementMode EdgeEnhancementMode;
   NvManualCamAeAntibandingMode AeAntibandingMode;
-  gfloat NoiseReductionStrength;
-  gfloat EdgeEnhancementStrength;
-  gfloat ExposureCompensation;
-  gboolean AeLock;
-  gboolean AwbLock;
+  float NoiseReductionStrength;
+  float EdgeEnhancementStrength;
+  float ExposureCompensation;
+  bool AeLock;
+  bool AwbLock;
 } NvManualCamControls;
+
 /* NvManualCameraSrc buffer */
 struct _GstNvManualCameraSrcBuffer {
   gint dmabuf_fd;
@@ -131,18 +127,13 @@ struct _GstNvManualCameraSrc {
 
   GstCaps* outcaps;
 
-  gint width;
-  gint height;
-  gint fps_n;
-  gint fps_d;
+  GstVideoInfo info;
+  guint64 frame_duration;  // in nanoseconds
   gint sensor_id;
   gint sensor_mode;
 
   guint total_sensor_modes;
   guint timeout;
-  gchar* exposureTimeString;
-  gchar* gainRangeString;
-  gchar* ispDigitalGainRangeString;
 
   GQueue* nvmm_buffers;
   GMutex nvmm_buffers_queue_lock;
@@ -168,8 +159,8 @@ struct _GstNvManualCameraSrc {
   gboolean wbPropSet;
   gboolean saturationPropSet;
   gboolean exposureTimePropSet;
-  gboolean gainRangePropSet;
-  gboolean ispDigitalGainRangePropSet;
+  gboolean gainPropSet;
+  gboolean ispDigitalGainPropSet;
   gboolean tnrStrengthPropSet;
   gboolean tnrModePropSet;
   gboolean edgeEnhancementStrengthPropSet;

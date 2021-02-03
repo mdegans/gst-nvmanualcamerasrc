@@ -59,27 +59,30 @@
 #include "Error.h"
 #include "gstnvmanualcamerasrc.hpp"
 
-#define CAPTURE_CAPS             \
-  "video/x-raw(memory:NVMM), "   \
-  "width = (int) [ 1, MAX ], "   \
-  "height = (int) [ 1, MAX ], "  \
-  "format = (string) { NV12 }, " \
-  "framerate = (fraction) [ 0, MAX ];"
+static const char* CAPTURE_CAPS =
+    "video/x-raw(memory:NVMM), "
+    "width = (int) [ 1, MAX ], "
+    "height = (int) [ 1, MAX ], "
+    "format = (string) { NV12 }, "
+    "framerate = (fraction) [ 0, MAX ];";
 
-#define MIN_BUFFERS 6
-#define MAX_BUFFERS 8
+static const guint MIN_BUFFERS = 6;
+static const guint MAX_BUFFERS = 8;
 
-#define MIN_GAIN 1
-#define MAX_GAIN 16
+static const gfloat MIN_EXPOSURE_TIME = 0.0f;
+static const gfloat MAX_EXPOSURE_TIME = 1.0f;
 
-#define MIN_EXPOSURE_TIME 10000
-#define MAX_EXPOSURE_TIME 358733000
+static const float MIN_GAIN = 1.0f;
+static const float MAX_GAIN = 16.0f;
 
-#define MIN_DIGITAL_GAIN 1
-#define MAX_DIGITAL_GAIN 256
+static const float MIN_DIGITAL_GAIN = 1.0f;
+static const float MAX_DIGITAL_GAIN = 256.0f;
 
-#define GST_NVMANUAL_MEMORY_TYPE "nvarguscam"
-static const int DEFAULT_FPS = 30;
+static const char* GST_NVMANUAL_MEMORY_TYPE = "nvarguscam";
+
+static const int DEFAULT_FPS = 30;       // mostly ignored, deprecated
+static const int DEFAULT_HEIGHT = 1080;  // mostly ignored, deprecated
+static const int DEFAULT_WIDTH = 1920;   // mostly ignored, deprecated
 
 GST_DEBUG_CATEGORY_STATIC(gst_nvmanualcamerasrc_debug);
 #define GST_CAT_DEFAULT gst_nvmanualcamerasrc_debug
@@ -237,7 +240,7 @@ bool StreamConsumer::threadInitialize(GstNvManualCameraSrc* src) {
 
 bool StreamConsumer::threadExecute(GstNvManualCameraSrc* src) {
   IEGLOutputStream* iStream = interface_cast<IEGLOutputStream>(m_stream);
-  Size2D<uint32_t> streamSize(src->width, src->height);
+  Size2D<uint32_t> streamSize(src->info.width, src->info.height);
   IFrameConsumer* iFrameConsumer = interface_cast<IFrameConsumer>(m_consumer);
 
   // Wait until the producer has connected to the stream.
@@ -426,29 +429,29 @@ bool StreamConsumer::threadExecute(GstNvManualCameraSrc* src) {
       src->aeAntibandingPropSet = FALSE;
     }
 
-    if (src->gainRangePropSet == TRUE) {
-      sensorModeAnalogGainRange.min() = src->controls.gainRange.low;
-      sensorModeAnalogGainRange.max() = src->controls.gainRange.high;
+    if (src->gainPropSet) {
+      sensorModeAnalogGainRange.min() = src->controls.gain;
+      sensorModeAnalogGainRange.max() = src->controls.gain;
       l_iRequestSourceSettings_ptr->setGainRange(sensorModeAnalogGainRange);
       l_iCaptureSession->repeat(l_captureRequest);
-      src->gainRangePropSet = FALSE;
+      src->gainPropSet = false;
     }
 
-    if (src->ispDigitalGainRangePropSet == TRUE) {
-      ispDigitalGainRange.min() = src->controls.ispDigitalGainRange.low;
-      ispDigitalGainRange.max() = src->controls.ispDigitalGainRange.high;
+    if (src->ispDigitalGainPropSet) {
+      ispDigitalGainRange.min() = src->controls.digital_gain;
+      ispDigitalGainRange.max() = src->controls.digital_gain;
       l_iAutoControlSettings_ptr->setIspDigitalGainRange(ispDigitalGainRange);
       l_iCaptureSession->repeat(l_captureRequest);
-      src->ispDigitalGainRangePropSet = FALSE;
+      src->ispDigitalGainPropSet = false;
     }
 
     if (src->exposureTimePropSet == TRUE) {
-      limitExposureTimeRange.min() = src->controls.exposureTimeRange.low;
-      limitExposureTimeRange.max() = src->controls.exposureTimeRange.high;
+      limitExposureTimeRange.min() = src->controls.exposure_real;
+      limitExposureTimeRange.max() = src->controls.exposure_real;
       l_iRequestSourceSettings_ptr->setExposureTimeRange(
           limitExposureTimeRange);
       l_iCaptureSession->repeat(l_captureRequest);
-      src->exposureTimePropSet = FALSE;
+      src->exposureTimePropSet = false;
     }
 
     // Use the IFrame interface to print out the frame number/timestamp, and
@@ -510,7 +513,7 @@ static bool execute(int32_t cameraIndex,
                     const Size2D<uint32_t>& streamSize,
                     int32_t secToRun,
                     GstNvManualCameraSrc* src) {
-  gfloat frameRate = 0, duration = 0;
+  gfloat frameRate = 0;
   uint32_t index = 0;
   gint found = 0;
   gint best_match = -1;
@@ -587,7 +590,7 @@ static bool execute(int32_t cameraIndex,
     ORIGINATE_ERROR("Failed to get request source settings");
   src->iRequestSourceSettings_ptr = requestSourceSettings;
 
-  if (cameraMode != NVMANUALCAM_DEFAULT_SENSOR_MODE_STATE &&
+  if (cameraMode != nvmanualcam::defaults::SENSOR_MODE_STATE &&
       static_cast<uint32_t>(cameraMode) >= modes.size())
     ORIGINATE_ERROR("Invalid sensor mode %d selected %d present", cameraMode,
                     static_cast<int32_t>(modes.size()));
@@ -595,8 +598,7 @@ static bool execute(int32_t cameraIndex,
   src->total_sensor_modes = modes.size();
 
   GST_MANUAL_PRINT("Available Sensor modes :");
-  frameRate = src->fps_n / src->fps_d;
-  duration = 1e9 * src->fps_d / src->fps_n;
+  frameRate = src->info.fps_n / src->info.fps_d;
   ISensorMode* iSensorMode[modes.size()];
   Range<float> sensorModeAnalogGainRange;
   Range<float> ispDigitalGainRange;
@@ -615,10 +617,11 @@ static bool execute(int32_t cameraIndex,
         sensorModeAnalogGainRange.min(), sensorModeAnalogGainRange.max(),
         limitExposureTimeRange.min(), limitExposureTimeRange.max());
 
-    if (cameraMode == NVMANUALCAM_DEFAULT_SENSOR_MODE_STATE) {
+    if (cameraMode == nvmanualcam::defaults::SENSOR_MODE_STATE) {
       if (streamSize.width() <= iSensorMode[index]->getResolution().width() &&
           streamSize.height() <= iSensorMode[index]->getResolution().height() &&
-          duration >= (iSensorMode[index]->getFrameDurationRange().min())) {
+          src->frame_duration >=
+              (iSensorMode[index]->getFrameDurationRange().min())) {
         if (best_match == -1 ||
             ((streamSize.width() ==
               iSensorMode[index]->getResolution().width()) &&
@@ -636,7 +639,7 @@ static bool execute(int32_t cameraIndex,
     }
   }
 
-  if (cameraMode == NVMANUALCAM_DEFAULT_SENSOR_MODE_STATE) {
+  if (cameraMode == nvmanualcam::defaults::SENSOR_MODE_STATE) {
     if (0 == found) {
       /* As request resolution is not supported, switch to default
        * sensormode Index.
@@ -818,32 +821,32 @@ static bool execute(int32_t cameraIndex,
   if (src->saturationPropSet) {
     iAutoControlSettings->setColorSaturationEnable(TRUE);
     iAutoControlSettings->setColorSaturation(src->controls.saturation);
-    src->saturationPropSet = FALSE;
+    src->saturationPropSet = false;
   }
 
-  if (src->exposureTimePropSet == TRUE) {
-    limitExposureTimeRange.min() = src->controls.exposureTimeRange.low;
-    limitExposureTimeRange.max() = src->controls.exposureTimeRange.high;
+  if (src->exposureTimePropSet) {
+    limitExposureTimeRange.min() = src->controls.exposure_real;
+    limitExposureTimeRange.max() = src->controls.exposure_real;
     requestSourceSettings->setExposureTimeRange(limitExposureTimeRange);
-    src->exposureTimePropSet = FALSE;
+    src->exposureTimePropSet = false;
   }
 
-  if (src->gainRangePropSet == TRUE) {
-    sensorModeAnalogGainRange.min() = src->controls.gainRange.low;
-    sensorModeAnalogGainRange.max() = src->controls.gainRange.high;
+  if (src->gainPropSet) {
+    sensorModeAnalogGainRange.min() = src->controls.gain;
+    sensorModeAnalogGainRange.max() = src->controls.gain;
     requestSourceSettings->setGainRange(sensorModeAnalogGainRange);
-    src->gainRangePropSet = FALSE;
+    src->gainPropSet = false;
   }
 
-  if (src->ispDigitalGainRangePropSet == TRUE) {
-    ispDigitalGainRange.min() = src->controls.ispDigitalGainRange.low;
-    ispDigitalGainRange.max() = src->controls.ispDigitalGainRange.high;
+  if (src->ispDigitalGainPropSet) {
+    ispDigitalGainRange.min() = src->controls.digital_gain;
+    ispDigitalGainRange.max() = src->controls.digital_gain;
     iAutoControlSettings->setIspDigitalGainRange(ispDigitalGainRange);
-    src->ispDigitalGainRangePropSet = FALSE;
+    src->ispDigitalGainPropSet = false;
   }
 
   requestSourceSettings->setSensorMode(modes[cameraMode]);
-  if (!src->fps_n) {
+  if (!src->info.fps_n) {
     frameRate = DEFAULT_FPS;
   }
 
@@ -919,9 +922,10 @@ enum {
   PROP_SENSOR_ID,
   PROP_SENSOR_MODE,
   PROP_TOTAL_SENSOR_MODES,
-  PROP_EXPOSURE_TIME_RANGE,
-  PROP_GAIN_RANGE,
-  PROP_DIGITAL_GAIN_RANGE,
+  PROP_EXPOSURE_TIME,
+  PROP_EXPOSURE_REAL,
+  PROP_GAIN,
+  PROP_DIGITAL_GAIN,
   PROP_TNR_STRENGTH,
   PROP_TNR_MODE,
   PROP_EDGE_ENHANCEMENT_MODE,
@@ -1036,8 +1040,8 @@ static GstMemory* gst_nv_memory_allocator_alloc(GstAllocator* allocator,
   nvbuf = g_slice_new0(GstNvManualCameraSrcBuffer);
 
   {
-    input_params.width = self->width;
-    input_params.height = self->height;
+    input_params.width = self->info.width;
+    input_params.height = self->info.height;
     input_params.layout = NvBufferLayout_BlockLinear;
     input_params.colorFormat = NvBufferColorFormat_NV12;
     input_params.payloadType = NvBufferPayload_SurfArray;
@@ -1138,32 +1142,40 @@ static GstCaps* gst_nv_manual_camera_fixate(GstBaseSrc* src, GstCaps* caps) {
 
   structure = gst_caps_get_structure(caps, 0);
 
-  gst_structure_fixate_field_nearest_int(structure, "width", 1920);
-  gst_structure_fixate_field_nearest_int(structure, "height", 1080);
-  gst_structure_fixate_field_nearest_fraction(structure, "framerate", 30, 1);
+  gst_structure_fixate_field_nearest_int(structure, "width", DEFAULT_WIDTH);
+  gst_structure_fixate_field_nearest_int(structure, "height", DEFAULT_HEIGHT);
+  gst_structure_fixate_field_nearest_fraction(structure, "framerate",
+                                              DEFAULT_FPS, 1);
   caps = GST_BASE_SRC_CLASS(gst_nv_manual_camera_src_parent_class)
              ->fixate(src, caps);
 
   return caps;
 }
 
+/**
+ * @brief Get the frame duration in nanoseconds from a GstVideoInfo.
+ *
+ * @param info a GstVideoInfo structure
+ * @return uint64_t duration of one frame in nanoseconds
+ */
+static uint64_t get_frame_duration(const GstVideoInfo& info) {
+  return (uint64_t)1e9 * info.fps_d / info.fps_n;
+}
+
 static gboolean gst_nv_manual_camera_set_caps(GstBaseSrc* base, GstCaps* caps) {
-  GstVideoInfo info;
   GstCaps* old;
   GstNvManualCameraSrc* src = GST_NVMANUALCAMERASRC(base);
   // write own allocator here
 
   GST_DEBUG_OBJECT(src, "Received caps %" GST_PTR_FORMAT, caps);
 
-  if (!gst_video_info_from_caps(&info, caps)) {
-    GST_ERROR_OBJECT(src, "caps invalid");
+  if (!gst_video_info_from_caps(&src->info, caps)) {
+    GST_ERROR_OBJECT(src, "could not get GstVideoInfo from GstCaps");
     return FALSE;
   }
 
-  src->width = info.width;
-  src->height = info.height;
-  src->fps_n = info.fps_n;
-  src->fps_d = info.fps_d;
+  // recalculate frame duration
+  src->frame_duration = get_frame_duration(src->info);
 
   if ((old = src->outcaps) != caps) {
     if (caps)
@@ -1266,7 +1278,7 @@ static gpointer manual_thread(gpointer src_base) {
   int32_t cameraIndex = src->sensor_id;
   int32_t cameraMode = src->sensor_mode;
   int32_t secToRun = src->timeout;
-  Size2D<uint32_t> streamSize(src->width, src->height);
+  Size2D<uint32_t> streamSize(src->info.width, src->info.height);
 
   ManualCamera::execute(cameraIndex, cameraMode, streamSize, secToRun, src);
 
@@ -1419,94 +1431,95 @@ static GstFlowReturn gst_nv_manual_camera_create(GstBaseSrc* src_base,
   return ret;
 }
 
-static gboolean set_range(GstNvManualCameraSrc* src, guint prop_id) {
-  gchar** tokens;
-  gchar** temp;
-  gchar* token;
-  gfloat array[2];
-  gint index = 0;
-  gfloat val;
-  gboolean ret;
-  gchar* str;
-  NvManualCameraRange range;
+// static gboolean set_range(GstNvManualCameraSrc* src, guint prop_id) {
+//   gchar** tokens;
+//   gchar** temp;
+//   gchar* token;
+//   gfloat array[2];
+//   gint index = 0;
+//   gfloat val;
+//   gboolean ret;
+//   gchar* str;
+//   NvManualCameraRange range;
 
-  if (prop_id == PROP_GAIN_RANGE) {
-    str = src->gainRangeString;
-    GST_MANUAL_PRINT("NvManualCameraSrc: Setting Gain Range : %s", str);
-  } else if (prop_id == PROP_EXPOSURE_TIME_RANGE) {
-    str = src->exposureTimeString;
-    GST_MANUAL_PRINT("NvManualCameraSrc: Setting Exposure Time Range : %s",
-                     str);
-  } else if (prop_id == PROP_DIGITAL_GAIN_RANGE) {
-    str = src->ispDigitalGainRangeString;
-    GST_MANUAL_PRINT("NvManualCameraSrc: Setting ISP Digital Gain Range : %s",
-                     str);
-  } else {
-    GST_MANUAL_PRINT("NvManualCameraSrc: property not defined");
-    return FALSE;
-  }
+//   if (prop_id == PROP_GAIN_RANGE) {
+//     str = src->gainRangeString;
+//     GST_MANUAL_PRINT("NvManualCameraSrc: Setting Gain Range : %s", str);
+//   } else if (prop_id == PROP_EXPOSURE_TIME_RANGE) {
+//     str = src->exposureTimeString;
+//     GST_MANUAL_PRINT("NvManualCameraSrc: Setting Exposure Time Range : %s",
+//                      str);
+//   } else if (prop_id == PROP_DIGITAL_GAIN_RANGE) {
+//     str = src->ispDigitalGainRangeString;
+//     GST_MANUAL_PRINT("NvManualCameraSrc: Setting ISP Digital Gain Range :
+//     %s",
+//                      str);
+//   } else {
+//     GST_MANUAL_PRINT("NvManualCameraSrc: property not defined");
+//     return FALSE;
+//   }
 
-  if (!str)
-    return FALSE;
+//   if (!str)
+//     return FALSE;
 
-  tokens = g_strsplit_set(str, " \"\'", -1);
-  temp = tokens;
-  while (*temp) {
-    token = *temp++;
-    if (!g_strcmp0(token, ""))
-      continue;
+//   tokens = g_strsplit_set(str, " \"\'", -1);
+//   temp = tokens;
+//   while (*temp) {
+//     token = *temp++;
+//     if (!g_strcmp0(token, ""))
+//       continue;
 
-    if (index == 2) {
-      GST_MANUAL_PRINT("Invalid Range Input");
-      ret = FALSE;
-      goto done;
-    }
+//     if (index == 2) {
+//       GST_MANUAL_PRINT("Invalid Range Input");
+//       ret = FALSE;
+//       goto done;
+//     }
 
-    val = atof(token);
-    array[index++] = val;
-  }
-  if (index == 2) {
-    if (prop_id == PROP_GAIN_RANGE) {
-      if (array[0] < MIN_GAIN || array[1] > MAX_GAIN) {
-        GST_MANUAL_PRINT("Invalid Gain Range Input");
-        ret = FALSE;
-        goto done;
-      }
-      range.low = array[0];
-      range.high = array[1];
-      src->controls.gainRange = range;
-    } else if (prop_id == PROP_EXPOSURE_TIME_RANGE) {
-      if (array[0] < MIN_EXPOSURE_TIME || array[1] > MAX_EXPOSURE_TIME) {
-        GST_MANUAL_PRINT("Invalid Exposure Time Range Input");
-        ret = FALSE;
-        goto done;
-      }
-      range.low = array[0];
-      range.high = array[1];
-      src->controls.exposureTimeRange = range;
-    } else if (prop_id == PROP_DIGITAL_GAIN_RANGE) {
-      if (array[0] < MIN_DIGITAL_GAIN || array[1] > MAX_DIGITAL_GAIN) {
-        GST_MANUAL_PRINT("Invalid ISP Digital Gain Range Input");
-        ret = FALSE;
-        goto done;
-      }
-      range.low = array[0];
-      range.high = array[1];
-      src->controls.ispDigitalGainRange = range;
-    } else {
-      GST_MANUAL_PRINT("NvManualCameraSrc: property not defined");
-      return FALSE;
-    }
-  } else {
-    GST_MANUAL_PRINT("Need two values to set range");
-    ret = FALSE;
-    goto done;
-  }
-  ret = TRUE;
-done:
-  g_strfreev(tokens);
-  return ret;
-}
+//     val = atof(token);
+//     array[index++] = val;
+//   }
+//   if (index == 2) {
+//     if (prop_id == PROP_GAIN_RANGE) {
+//       if (array[0] < MIN_GAIN || array[1] > MAX_GAIN) {
+//         GST_MANUAL_PRINT("Invalid Gain Range Input");
+//         ret = FALSE;
+//         goto done;
+//       }
+//       range.low = array[0];
+//       range.high = array[1];
+//       src->controls.gainRange = range;
+//     } else if (prop_id == PROP_EXPOSURE_TIME_RANGE) {
+//       if (array[0] < MIN_EXPOSURE_TIME || array[1] > MAX_EXPOSURE_TIME) {
+//         GST_MANUAL_PRINT("Invalid Exposure Time Range Input");
+//         ret = FALSE;
+//         goto done;
+//       }
+//       range.low = array[0];
+//       range.high = array[1];
+//       src->controls.exposureTimeRange = range;
+//     } else if (prop_id == PROP_DIGITAL_GAIN_RANGE) {
+//       if (array[0] < MIN_DIGITAL_GAIN || array[1] > MAX_DIGITAL_GAIN) {
+//         GST_MANUAL_PRINT("Invalid ISP Digital Gain Range Input");
+//         ret = FALSE;
+//         goto done;
+//       }
+//       range.low = array[0];
+//       range.high = array[1];
+//       src->controls.ispDigitalGainRange = range;
+//     } else {
+//       GST_MANUAL_PRINT("NvManualCameraSrc: property not defined");
+//       return FALSE;
+//     }
+//   } else {
+//     GST_MANUAL_PRINT("Need two values to set range");
+//     ret = FALSE;
+//     goto done;
+//   }
+//   ret = TRUE;
+// done:
+//   g_strfreev(tokens);
+//   return ret;
+// }
 
 /* initialize the nvmanualcamerasrc's class */
 static void gst_nv_manual_camera_src_class_init(
@@ -1535,85 +1548,84 @@ static void gst_nv_manual_camera_src_class_init(
   g_object_class_install_property(
       gobject_class, PROP_WHITE_BALANCE,
       g_param_spec_enum(
-          "wbmode", "white balance mode",
-          "White balance affects the color temperature of the photo",
-          GST_TYPE_NVMANUALCAM_WB_MODE, NVMANUALCAM_DEFAULT_WB_MODE,
+          "wbmode", "white balance mode", "Argus white balance preset.",
+          GST_TYPE_NVMANUALCAM_WB_MODE, nvmanualcam::defaults::WB_MODE,
           (GParamFlags)(G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS)));
 
   g_object_class_install_property(
       gobject_class, PROP_SATURATION,
       g_param_spec_float(
-          "saturation", "saturation", "Property to adjust saturation value",
-          0.0, 2.0, NVMANUALCAM_DEFAULT_SATURATION,
+          "saturation", "saturation",
+          "0.0 is b&w, 1.0 == normal, 2.0 == \"Fujify\" me.", 0.0, 2.0,
+          nvmanualcam::defaults::SATURATION,
           (GParamFlags)(G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS)));
 
   g_object_class_install_property(
       gobject_class, PROP_SILENT,
-      g_param_spec_boolean("silent", "Silent", "Produce verbose output ?",
-                           FALSE, (GParamFlags)G_PARAM_READWRITE));
+      g_param_spec_boolean(
+          "silent", "Silent", "Less logging when true. Mostly unused.", false,
+          (GParamFlags)(G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS)));
 
   g_object_class_install_property(
       gobject_class, PROP_TIMEOUT,
-      g_param_spec_uint("timeout", "timeout",
-                        "timeout to capture in seconds (Either specify timeout "
-                        "or num-buffers, not both)",
-                        0, G_MAXINT, 0, (GParamFlags)G_PARAM_READWRITE));
+      g_param_spec_uint(
+          "timeout", "Timeout",
+          "timeout to capture in seconds (Either specify timeout "
+          "or num-buffers, not both)",
+          0, G_MAXINT, 0,
+          (GParamFlags)(G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS)));
 
   g_object_class_install_property(
       gobject_class, PROP_SENSOR_ID,
       g_param_spec_int(
-          "sensor-id", "Sensor ID",
-          "Set the id of camera sensor to use. Default 0.", 0, G_MAXUINT8,
-          NVMANUALCAM_DEFAULT_SENSOR_ID,
+          "sensor-id", "Sensor ID", "Set the id of camera sensor to use.", 0,
+          G_MAXUINT8, nvmanualcam::defaults::SENSOR_ID,
           (GParamFlags)(G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS)));
 
   g_object_class_install_property(
       gobject_class, PROP_SENSOR_MODE,
       g_param_spec_int(
           "sensor-mode", "Sensor Mode",
-          "Set the camera sensor mode to use. Default -1 (Select the best "
-          "match)",
-          -1, G_MAXUINT8, NVMANUALCAM_DEFAULT_SENSOR_MODE_STATE,
+          "Camera sensor mode to use. (-1 uses the default, which is \?\?\?)",
+          -1, G_MAXUINT8, nvmanualcam::defaults::SENSOR_MODE_STATE,
           (GParamFlags)(G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS)));
 
   g_object_class_install_property(
       gobject_class, PROP_TOTAL_SENSOR_MODES,
-      g_param_spec_int("total-sensor-modes", "Total Sensor Modes",
-                       "Query the number of sensor modes available. Default 0",
-                       0, G_MAXUINT8, NVMANUALCAM_DEFAULT_TOTAL_SENSOR_MODES,
-                       (GParamFlags)(G_PARAM_READABLE)));
+      g_param_spec_int(
+          "total-sensor-modes", "Total Sensor Modes",
+          "Query the number of sensor modes available.", 0, G_MAXUINT8,
+          nvmanualcam::defaults::TOTAL_SENSOR_MODES,
+          (GParamFlags)(G_PARAM_READABLE | G_PARAM_STATIC_STRINGS)));
 
   g_object_class_install_property(
-      gobject_class, PROP_EXPOSURE_TIME_RANGE,
-      g_param_spec_string(
-          "exposuretimerange", "Exposure Time Range",
-          "Property to adjust exposure time range in nanoseconds\n"
-          "\t\t\tUse string with values of Exposure Time Range (low, high)\n"
-          "\t\t\tin that order, to set the property.\n"
-          "\t\t\teg: exposuretimerange=\"10000 358733000\"",
-          NVMANUALCAM_DEFAULT_EXPOSURE_TIME,
+      gobject_class, PROP_EXPOSURE_TIME,
+      g_param_spec_float(
+          "exposuretime", "Exposure Time", "Exposure time in *frames*",
+          MIN_EXPOSURE_TIME, MAX_EXPOSURE_TIME,
+          nvmanualcam::defaults::EXPOSURE_TIME,
           (GParamFlags)(G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS)));
 
   g_object_class_install_property(
-      gobject_class, PROP_GAIN_RANGE,
-      g_param_spec_string(
-          "gainrange", "Gain Range",
-          "Property to adjust gain range\n"
-          "\t\t\tUse string with values of Gain Time Range (low, high)\n"
-          "\t\t\tin that order, to set the property.\n"
-          "\t\t\teg: gainrange=\"1 16\"",
-          NVMANUALCAM_DEFAULT_GAIN_RANGE,
+      gobject_class, PROP_EXPOSURE_REAL,
+      g_param_spec_uint64(
+          "exposurereal", "Real Exposure Time", "Actual exposure time in ns.",
+          0, G_MAXUINT64, 0,
+          (GParamFlags)(G_PARAM_READABLE | G_PARAM_STATIC_STRINGS)));
+
+  g_object_class_install_property(
+      gobject_class, PROP_GAIN,
+      g_param_spec_float(
+          "gain", "Analog Gain", "Set/get analog gain.", MIN_GAIN, MAX_GAIN,
+          nvmanualcam::defaults::GAIN,
           (GParamFlags)(G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS)));
 
   g_object_class_install_property(
-      gobject_class, PROP_DIGITAL_GAIN_RANGE,
-      g_param_spec_string(
-          "ispdigitalgainrange", "ISP Digital Gain Range",
-          "Property to adjust digital gain range\n"
-          "\t\t\tUse string with values of ISP Digital Gain Range (low, high)\n"
-          "\t\t\tin that order, to set the property.\n"
-          "\t\t\teg: ispdigitalgainrange=\"1 8\"",
-          NVMANUALCAM_DEFAULT_GAIN_RANGE,
+      gobject_class, PROP_DIGITAL_GAIN,
+      g_param_spec_float(
+          "digitalgain", "Digital Gain", "Set/get ISP digital gain.",
+          MIN_DIGITAL_GAIN, MAX_DIGITAL_GAIN,
+          nvmanualcam::defaults::DIGITAL_GAIN,
           (GParamFlags)(G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS)));
 
   g_object_class_install_property(
@@ -1621,7 +1633,7 @@ static void gst_nv_manual_camera_src_class_init(
       g_param_spec_float(
           "tnr-strength", "TNR Strength",
           "property to adjust temporal noise reduction strength", -1.0, 1.0,
-          NVMANUALCAM_DEFAULT_TNR_STRENGTH,
+          nvmanualcam::defaults::TNR_STRENGTH,
           (GParamFlags)(G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS)));
 
   g_object_class_install_property(
@@ -1629,7 +1641,7 @@ static void gst_nv_manual_camera_src_class_init(
       g_param_spec_enum(
           "tnr-mode", "TNR mode",
           "property to select temporal noise reduction mode",
-          GST_TYPE_NVMANUALCAM_TNR_MODE, NVMANUALCAM_DEFAULT_TNR_MODE,
+          GST_TYPE_NVMANUALCAM_TNR_MODE, nvmanualcam::defaults::TNR_MODE,
           (GParamFlags)(G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS)));
 
   g_object_class_install_property(
@@ -1637,7 +1649,7 @@ static void gst_nv_manual_camera_src_class_init(
       g_param_spec_float(
           "ee-strength", "TNR Strength",
           "property to adjust edge enhancement strength", -1.0, 1.0,
-          NVMANUALCAM_DEFAULT_EE_STRENGTH,
+          nvmanualcam::defaults::TNR_STRENGTH,
           (GParamFlags)(G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS)));
 
   g_object_class_install_property(
@@ -1646,7 +1658,7 @@ static void gst_nv_manual_camera_src_class_init(
           "ee-mode", "Edge Enhancement",
           "property to select edge enhnacement mode",
           GST_TYPE_NVMANUALCAM_EDGE_ENHANCEMENT_MODE,
-          NVMANUALCAM_DEFAULT_EE_MODE,
+          nvmanualcam::defaults::EE_MODE,
           (GParamFlags)(G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS)));
 
   g_object_class_install_property(
@@ -1655,7 +1667,7 @@ static void gst_nv_manual_camera_src_class_init(
           "aeantibanding", "Auto Exposure Antibanding Mode",
           "property to set the auto exposure antibanding mode",
           GST_TYPE_NVMANUALCAM_AEANTIBANDING_MODE,
-          NVMANUALCAM_DEFAULT_AEANTIBANDING_MODE,
+          nvmanualcam::defaults::AEANTIBANDING_MODE,
           (GParamFlags)(G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS)));
 
   g_object_class_install_property(
@@ -1663,7 +1675,7 @@ static void gst_nv_manual_camera_src_class_init(
       g_param_spec_float(
           "exposurecompensation", "Exposure Compensation",
           "property to adjust exposure compensation", -2.0, 2.0,
-          NVMANUALCAM_DEFAULT_EXP_COMPENSATION,
+          nvmanualcam::defaults::EXP_COMPENSATION,
           (GParamFlags)(G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS)));
 
   g_object_class_install_property(
@@ -1699,28 +1711,30 @@ static void gst_nv_manual_camera_src_class_init(
  * initialize instance structure
  */
 static void gst_nv_manual_camera_src_init(GstNvManualCameraSrc* src) {
-  src->width = 1920;
-  src->height = 1080;
-  src->fps_n = 30;
-  src->fps_d = 1;
+  gst_video_info_init(&src->info);
+  src->info.width = DEFAULT_WIDTH;
+  src->info.height = DEFAULT_HEIGHT;
+  src->info.fps_n = DEFAULT_FPS;
+  src->info.fps_d = 1;
+  src->frame_duration = get_frame_duration(src->info);
   src->stop_requested = FALSE;
   src->unlock_requested = FALSE;
   src->silent = TRUE;
   src->outcaps = NULL;
   src->timeout = 0;
   src->manual_in_error = FALSE;
-  src->sensor_id = NVMANUALCAM_DEFAULT_SENSOR_ID;
-  src->sensor_mode = NVMANUALCAM_DEFAULT_SENSOR_MODE_STATE;
-  src->total_sensor_modes = NVMANUALCAM_DEFAULT_TOTAL_SENSOR_MODES;
-  src->controls.NoiseReductionStrength = NVMANUALCAM_DEFAULT_TNR_STRENGTH;
-  src->controls.NoiseReductionMode = NVMANUALCAM_DEFAULT_TNR_MODE;
-  src->controls.wbmode = NVMANUALCAM_DEFAULT_WB_MODE;
-  src->controls.saturation = NVMANUALCAM_DEFAULT_SATURATION;
-  src->controls.EdgeEnhancementStrength = NVMANUALCAM_DEFAULT_EE_STRENGTH;
-  src->controls.EdgeEnhancementMode = NVMANUALCAM_DEFAULT_EE_MODE;
-  src->controls.AeAntibandingMode = NVMANUALCAM_DEFAULT_AEANTIBANDING_MODE;
-  src->controls.AeLock = NVMANUALCAM_DEFAULT_AE_LOCK;
-  src->controls.AwbLock = NVMANUALCAM_DEFAULT_AWB_LOCK;
+  src->sensor_id = nvmanualcam::defaults::SENSOR_ID;
+  src->sensor_mode = nvmanualcam::defaults::SENSOR_MODE_STATE;
+  src->total_sensor_modes = nvmanualcam::defaults::TOTAL_SENSOR_MODES;
+  src->controls.NoiseReductionStrength = nvmanualcam::defaults::TNR_STRENGTH;
+  src->controls.NoiseReductionMode = nvmanualcam::defaults::TNR_MODE;
+  src->controls.wbmode = nvmanualcam::defaults::WB_MODE;
+  src->controls.saturation = nvmanualcam::defaults::SATURATION;
+  src->controls.EdgeEnhancementStrength = nvmanualcam::defaults::EE_STRENGTH;
+  src->controls.EdgeEnhancementMode = nvmanualcam::defaults::EE_MODE;
+  src->controls.AeAntibandingMode = nvmanualcam::defaults::AEANTIBANDING_MODE;
+  src->controls.AeLock = nvmanualcam::defaults::AE_LOCK;
+  src->controls.AwbLock = nvmanualcam::defaults::AWB_LOCK;
 
   g_mutex_init(&src->manual_buffers_queue_lock);
   g_cond_init(&src->manual_buffers_queue_cond);
@@ -1743,7 +1757,7 @@ static void gst_nv_manual_camera_src_init(GstNvManualCameraSrc* src) {
 
 static void gst_nv_manual_camera_src_finalize(GObject* object) {
   GstNvManualCameraSrc* src = GST_NVMANUALCAMERASRC(object);
-  GST_DEBUG_OBJECT(src, "finalize");
+  GST_DEBUG_OBJECT(src, "cleaning up");
   g_mutex_clear(&src->nvmm_buffers_queue_lock);
   g_cond_clear(&src->nvmm_buffers_queue_cond);
   g_mutex_clear(&src->manual_buffers_queue_lock);
@@ -1752,18 +1766,6 @@ static void gst_nv_manual_camera_src_finalize(GObject* object) {
   g_cond_clear(&src->manual_buffer_consumed_cond);
   g_mutex_clear(&src->eos_lock);
   g_cond_clear(&src->eos_cond);
-  if (src->exposureTimeString) {
-    g_free(src->exposureTimeString);
-    src->exposureTimeString = NULL;
-  }
-  if (src->gainRangeString) {
-    g_free(src->gainRangeString);
-    src->gainRangeString = NULL;
-  }
-  if (src->ispDigitalGainRangeString) {
-    g_free(src->ispDigitalGainRangeString);
-    src->ispDigitalGainRangeString = NULL;
-  }
 }
 
 static void gst_nv_manual_camera_src_set_property(GObject* object,
@@ -1793,45 +1795,17 @@ static void gst_nv_manual_camera_src_set_property(GObject* object,
     case PROP_SENSOR_MODE:
       src->sensor_mode = g_value_get_int(value);
       break;
-    case PROP_EXPOSURE_TIME_RANGE: {
-      gchar* prev_exposureTime = NULL;
-      prev_exposureTime = src->exposureTimeString;
-
-      src->exposureTimeString = (gchar*)g_value_dup_string(value);
-      if (!set_range(src, prop_id)) {
-        g_free(src->exposureTimeString);
-        src->exposureTimeString = prev_exposureTime;
-      } else {
-        g_free(prev_exposureTime);
-        src->exposureTimePropSet = TRUE;
-      }
-    } break;
-    case PROP_GAIN_RANGE: {
-      gchar* prev_gainrange = NULL;
-      prev_gainrange = src->gainRangeString;
-
-      src->gainRangeString = (gchar*)g_value_dup_string(value);
-      if (!set_range(src, prop_id)) {
-        g_free(src->gainRangeString);
-        src->gainRangeString = prev_gainrange;
-      } else {
-        g_free(prev_gainrange);
-        src->gainRangePropSet = TRUE;
-      }
-    } break;
-    case PROP_DIGITAL_GAIN_RANGE: {
-      gchar* prev_ispdigitalgainrange = NULL;
-      prev_ispdigitalgainrange = src->ispDigitalGainRangeString;
-
-      src->ispDigitalGainRangeString = (gchar*)g_value_dup_string(value);
-      if (!set_range(src, prop_id)) {
-        g_free(src->ispDigitalGainRangeString);
-        src->ispDigitalGainRangeString = prev_ispdigitalgainrange;
-      } else {
-        g_free(prev_ispdigitalgainrange);
-        src->ispDigitalGainRangePropSet = TRUE;
-      }
-    } break;
+    case PROP_EXPOSURE_TIME:
+      src->controls.exposure_time = g_value_get_float(value);
+      src->controls.exposure_real =
+          src->controls.exposure_time * src->frame_duration;
+      break;
+    case PROP_GAIN:
+      src->controls.gain = g_value_get_float(value);
+      break;
+    case PROP_DIGITAL_GAIN:
+      src->controls.digital_gain = g_value_get_float(value);
+      break;
     case PROP_TNR_STRENGTH:
       src->controls.NoiseReductionStrength = g_value_get_float(value);
       src->tnrStrengthPropSet = TRUE;
@@ -1904,14 +1878,17 @@ static void gst_nv_manual_camera_src_get_property(GObject* object,
     case PROP_TOTAL_SENSOR_MODES:
       g_value_set_int(value, src->total_sensor_modes);
       break;
-    case PROP_EXPOSURE_TIME_RANGE:
-      g_value_set_string(value, src->exposureTimeString);
+    case PROP_EXPOSURE_TIME:
+      g_value_set_float(value, src->controls.exposure_time);
       break;
-    case PROP_GAIN_RANGE:
-      g_value_set_string(value, src->gainRangeString);
+    case PROP_EXPOSURE_REAL:
+      g_value_set_uint64(value, src->controls.exposure_real);
       break;
-    case PROP_DIGITAL_GAIN_RANGE:
-      g_value_set_string(value, src->ispDigitalGainRangeString);
+    case PROP_GAIN:
+      g_value_set_float(value, src->controls.gain);
+      break;
+    case PROP_DIGITAL_GAIN:
+      g_value_set_float(value, src->controls.digital_gain);
       break;
     case PROP_TNR_STRENGTH:
       g_value_set_float(value, src->controls.NoiseReductionStrength);
