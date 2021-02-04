@@ -31,34 +31,34 @@
  * register the element factories and other features
  */
 
-#include "gstnvarguscamera_config.h"
-#include "gstnvarguscamerasrc.hpp"
+#include "gstnvmanualcamera_config.h"
+#include "gstnvmanualcamerasrc.hpp"
 
 #include <gst/base/gstbasesrc.h>
 #include <gst/gst.h>
 
-static gboolean nvarguscamerasrc_init(GstPlugin* nvarguscamerasrc) {
+static gboolean nvmanualcamerasrc_init(GstPlugin* nvmanualcamerasrc) {
   /* debug category for fltering log messages
    *
-   * exchange the string 'Template nvarguscamerasrc' with your description
+   * exchange the string 'Template nvmanualcamerasrc' with your description
    */
-  return gst_element_register(nvarguscamerasrc, "nvarguscamerasrc",
-                              GST_RANK_PRIMARY, GST_TYPE_NVARGUSCAMERASRC);
+  return gst_element_register(nvmanualcamerasrc, "nvmanualcamerasrc",
+                              GST_RANK_PRIMARY, GST_TYPE_NVMANUALCAMERASRC);
 }
 
-/* gstreamer looks for this structure to register nvarguscamerasrcs
+/* gstreamer looks for this structure to register nvmanualcamerasrcs
  *
  * to change this:
- *  * Gnu Make: modify include/gstnvarguscamera_config_make.h
+ *  * Gnu Make: modify include/gstnvmanualcamera_config_make.h
  *  * Meson: change the VERSION file to set the version and the root meson.build
  *    for the rest.
  *
  */
 GST_PLUGIN_DEFINE(GST_VERSION_MAJOR,
                   GST_VERSION_MINOR,
-                  nvarguscamerasrc,
+                  nvmanualcamerasrc,
                   PROJ_DESCRIPTION,
-                  nvarguscamerasrc_init,
+                  nvmanualcamerasrc_init,
                   PROJ_VER,
                   LICENSE,
                   BINARY_PACKAGE,

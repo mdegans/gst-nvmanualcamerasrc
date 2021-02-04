@@ -1,6 +1,14 @@
-# gst-nvarguscamerasrc
+# gst-nvmanualcamerasrc
 
-Steps to compile the "gst-nvarguscamera" sources natively:
+This is a fork of nvarguscamerasrc. No effort is being made to maintain
+compatability with the original source's properties. It's mostly oriented
+towards people who want or need full manual control of capture settings.
+
+Changes from `nvarguscamerasrc`:
+* ranges are not supported. In development it's been found this is confusing.
+* exposure time is set in frames (exposure in nanoseconds is is gettable through `exposurereal` property)
+
+Steps to compile the "gst-nvmanualcamerasrc" sources natively:
 
 ## Requirements
 
@@ -21,7 +29,7 @@ sudo apt-get install nvidia-l4t-jetson-multimedia-api
 
 ## Building
 
-Run the following commands to build and install "libgstnvarguscamerasrc.so":
+Run the following commands to build and install "libgstnvmanualcamerasrc.so":
 
 using Gnu Make (`make`)
 
@@ -43,5 +51,5 @@ ninja
 (sudo) ninja install
 ```
 
-  Note: "sudo make install" will copy library "libgstnvarguscamerasrc.so"
+  Note: "sudo make install" will copy library "libgstnvmanualcamerasrc.so"
   into "/usr/lib/aarch64-linux-gnu/gstreamer-1.0" directory.

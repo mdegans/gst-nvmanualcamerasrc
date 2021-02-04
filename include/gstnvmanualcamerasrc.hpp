@@ -26,104 +26,100 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __GST_NVARGUSCAMERASRC_H__
-#define __GST_NVARGUSCAMERASRC_H__
+#ifndef A96C5A45_3E9B_445B_B3AD_E5A1F2FA13C8
+#define A96C5A45_3E9B_445B_B3AD_E5A1F2FA13C8
 
-#include <gst/base/gstbasesrc.h>
-#include <gst/gst.h>
-
-#include "gstnvarguscamera_utils.h"
 #include "gstnvdsbufferpool.h"
+#include "gstnvmanualcamera_utils.h"
 #include "nvbuf_utils.h"
 #include "nvbufsurface.h"
 
 #include "Ordered.h"
 
+#include <gst/base/gstbasesrc.h>
+#include <gst/gst.h>
+#include <gst/video/video.h>
+
 G_BEGIN_DECLS
 
 /* #defines don't like whitespacey bits */
-#define GST_TYPE_NVARGUSCAMERASRC (gst_nv_argus_camera_src_get_type())
-#define GST_NVARGUSCAMERASRC(obj)                               \
-  (G_TYPE_CHECK_INSTANCE_CAST((obj), GST_TYPE_NVARGUSCAMERASRC, \
-                              GstNvArgusCameraSrc))
-#define GST_NVARGUSCAMERASRC_CLASS(klass)                      \
-  (G_TYPE_CHECK_CLASS_CAST((klass), GST_TYPE_NVARGUSCAMERASRC, \
-                           GstNvArgusCameraSrcClass))
-#define GST_IS_NVARGUSCAMERASRC(obj) \
-  (G_TYPE_CHECK_INSTANCE_TYPE((obj), GST_TYPE_NVARGUSCAMERASRC))
-#define GST_IS_NVARGUSCAMERASRC_CLASS(klass) \
-  (G_TYPE_CHECK_CLASS_TYPE((klass), GST_TYPE_NVARGUSCAMERASRC))
+#define GST_TYPE_NVMANUALCAMERASRC (gst_nv_manual_camera_src_get_type())
+#define GST_NVMANUALCAMERASRC(obj)                               \
+  (G_TYPE_CHECK_INSTANCE_CAST((obj), GST_TYPE_NVMANUALCAMERASRC, \
+                              GstNvManualCameraSrc))
+#define GST_NVMANUALCAMERASRC_CLASS(klass)                      \
+  (G_TYPE_CHECK_CLASS_CAST((klass), GST_TYPE_NVMANUALCAMERASRC, \
+                           GstNvManualCameraSrcClass))
+#define GST_IS_NVMANUALCAMERASRC(obj) \
+  (G_TYPE_CHECK_INSTANCE_TYPE((obj), GST_TYPE_NVMANUALCAMERASRC))
+#define GST_IS_NVMANUALCAMERASRC_CLASS(klass) \
+  (G_TYPE_CHECK_CLASS_TYPE((klass), GST_TYPE_NVMANUALCAMERASRC))
 
-// clang-format off
+namespace nvmanualcam::defaults {
 
-#define NVARGUSCAM_DEFAULT_WB_MODE                   NvArgusCamAwbMode_Auto
-#define NVARGUSCAM_DEFAULT_SATURATION                1.0
-#define NVARGUSCAM_DEFAULT_EXPOSURE_TIME             "10000 358733000"
-#define NVARGUSCAM_DEFAULT_SENSOR_ID                 0
-#define NVARGUSCAM_DEFAULT_SENSOR_MODE_STATE         -1
-#define NVARGUSCAM_DEFAULT_TOTAL_SENSOR_MODES        0
-#define NVARGUSCAM_DEFAULT_GAIN_RANGE                "1 16"
-#define NVARGUSCAM_DEFAULT_DIGITAL_GAIN_RANGE        "1 256"
-#define NVARGUSCAM_DEFAULT_TNR_MODE                  NvArgusCamNoiseReductionMode_Fast
-#define NVARGUSCAM_DEFAULT_TNR_STRENGTH              -1.0
-#define NVARGUSCAM_DEFAULT_EE_MODE                   NvArgusCamEdgeEnhancementMode_Fast
-#define NVARGUSCAM_DEFAULT_EE_STRENGTH               -1.0
-#define NVARGUSCAM_DEFAULT_AEANTIBANDING_MODE        NvArgusCamAeAntibandingMode_Auto
-#define NVARGUSCAM_DEFAULT_EXP_COMPENSATION          0.0
-#define NVARGUSCAM_DEFAULT_AE_LOCK                   FALSE
-#define NVARGUSCAM_DEFAULT_AWB_LOCK                  FALSE
+const auto WB_MODE = NvManualCamAwbMode_Auto;
+const float SATURATION = 1.0;
+const float EXPOSURE_TIME = 1.0;
+const uint SENSOR_ID = 0;
+const int SENSOR_MODE_STATE = -1;
+const uint TOTAL_SENSOR_MODES = 0;
+const float GAIN = 1.0f;
+const float DIGITAL_GAIN = 1.0f;
+const auto TNR_MODE = NvManualCamNoiseReductionMode_Fast;
+const float TNR_STRENGTH = -1.0;
+const auto EE_MODE = NvManualCamEdgeEnhancementMode_Fast;
+const float EE_STRENGTH = -1.0;
+const auto AEANTIBANDING_MODE = NvManualCamAeAntibandingMode_Auto;
+const float EXP_COMPENSATION = 0.0;
+const bool AE_LOCK = false;
+const bool AWB_LOCK = false;
 
-// clang-format on
+}  // namespace nvmanualcam::defaults
 
-typedef struct _GstNvArgusCameraSrc GstNvArgusCameraSrc;
-typedef struct _GstNvArgusCameraSrcClass GstNvArgusCameraSrcClass;
+typedef struct _GstNvManualCameraSrc GstNvManualCameraSrc;
+typedef struct _GstNvManualCameraSrcClass GstNvManualCameraSrcClass;
 
-typedef struct _GstNvArgusCameraSrcBuffer GstNvArgusCameraSrcBuffer;
+typedef struct _GstNvManualCameraSrcBuffer GstNvManualCameraSrcBuffer;
 
-typedef struct NvArgusCameraRangeRec {
-  /**  Lower limit for the range. */
-  gfloat low;
-  /**  Upper limit for the range. */
-  gfloat high;
-} NvArgusCameraRange;
+/* NvManualCameraSrc Controls */
+typedef struct NvManualCamControls {
+  NvManualCamAwbMode wbmode;
+  float saturation;
+  float exposure_time;     // in frames
+  uint64_t exposure_real;  // in nanoseconds
+  float gain;              // min: 1, max: 16
+  float digital_gain;      // min 1, max: 256
+  NvManualCamNoiseReductionMode NoiseReductionMode;
+  NvManualCamEdgeEnhancementMode EdgeEnhancementMode;
+  NvManualCamAeAntibandingMode AeAntibandingMode;
+  float NoiseReductionStrength;
+  float EdgeEnhancementStrength;
+  float ExposureCompensation;
+  bool AeLock;
+  bool AwbLock;
+} NvManualCamControls;
 
-/* NvArgusCameraSrc Controls */
-typedef struct NvArgusCamControls {
-  NvArgusCamAwbMode wbmode;
-  gfloat saturation;
-  NvArgusCameraRange exposureTimeRange;
-  NvArgusCameraRange gainRange;
-  NvArgusCameraRange ispDigitalGainRange;
-  NvArgusCamNoiseReductionMode NoiseReductionMode;
-  NvArgusCamEdgeEnhancementMode EdgeEnhancementMode;
-  NvArgusCamAeAntibandingMode AeAntibandingMode;
-  gfloat NoiseReductionStrength;
-  gfloat EdgeEnhancementStrength;
-  gfloat ExposureCompensation;
-  gboolean AeLock;
-  gboolean AwbLock;
-} NvArgusCamControls;
-/* NvArgusCameraSrc buffer */
-struct _GstNvArgusCameraSrcBuffer {
+/* NvManualCameraSrc buffer */
+struct _GstNvManualCameraSrcBuffer {
   gint dmabuf_fd;
   gboolean bufApi;
   GstBuffer* gst_buf;
   NvBufSurface* surf;
 };
 
-typedef struct NvArgusFrameInfo {
+typedef struct NvManualFrameInfo {
   gint fd;
   guint64 frameNum;
   guint64 frameTime;
-} NvArgusFrameInfo;
+} NvManualFrameInfo;
 
-struct _GstNvArgusCameraSrc {
-  GstBaseSrc base_nvarguscamera;
+struct _GstNvManualCameraSrc {
+  GstBaseSrc base_nvmanualcamera;
 
   GstPad* srcpad;
 
   GThread* consumer_thread;
-  GThread* argus_thread;
+  GThread* manual_thread;
 
   gboolean silent;
 
@@ -131,18 +127,13 @@ struct _GstNvArgusCameraSrc {
 
   GstCaps* outcaps;
 
-  gint width;
-  gint height;
-  gint fps_n;
-  gint fps_d;
+  GstVideoInfo info;
+  guint64 frame_duration;  // in nanoseconds
   gint sensor_id;
   gint sensor_mode;
 
   guint total_sensor_modes;
   guint timeout;
-  gchar* exposureTimeString;
-  gchar* gainRangeString;
-  gchar* ispDigitalGainRangeString;
 
   GQueue* nvmm_buffers;
   GMutex nvmm_buffers_queue_lock;
@@ -153,23 +144,23 @@ struct _GstNvArgusCameraSrc {
 
   NvBufferTransformParams transform_params;
 
-  GQueue* argus_buffers;
-  GMutex argus_buffers_queue_lock;
-  GCond argus_buffers_queue_cond;
+  GQueue* manual_buffers;
+  GMutex manual_buffers_queue_lock;
+  GCond manual_buffers_queue_cond;
 
-  GMutex argus_buffer_consumed_lock;
-  GCond argus_buffer_consumed_cond;
-  gboolean is_argus_buffer_consumed;
+  GMutex manual_buffer_consumed_lock;
+  GCond manual_buffer_consumed_cond;
+  gboolean is_manual_buffer_consumed;
 
   GMutex eos_lock;
   GCond eos_cond;
 
-  NvArgusCamControls controls;
+  NvManualCamControls controls;
   gboolean wbPropSet;
   gboolean saturationPropSet;
   gboolean exposureTimePropSet;
-  gboolean gainRangePropSet;
-  gboolean ispDigitalGainRangePropSet;
+  gboolean gainPropSet;
+  gboolean ispDigitalGainPropSet;
   gboolean tnrStrengthPropSet;
   gboolean tnrModePropSet;
   gboolean edgeEnhancementStrengthPropSet;
@@ -179,7 +170,7 @@ struct _GstNvArgusCameraSrc {
   gboolean aeLockPropSet;
   gboolean awbLockPropSet;
   gboolean bufApi;
-  gboolean argus_in_error;
+  gboolean manual_in_error;
   void* iRequest_ptr;
   void* iCaptureSession_ptr;
   void* iAutoControlSettings_ptr;
@@ -188,14 +179,14 @@ struct _GstNvArgusCameraSrc {
   void* iDenoiseSettings_ptr;
   void* iEeSettings_ptr;
   void* iRequestSourceSettings_ptr;
-  NvArgusFrameInfo* frameInfo;
+  NvManualFrameInfo* frameInfo;
 };
 
-struct _GstNvArgusCameraSrcClass {
-  GstBaseSrcClass base_nvarguscamera_class;
+struct _GstNvManualCameraSrcClass {
+  GstBaseSrcClass base_nvmanualcamera_class;
 };
 
-GType gst_nv_argus_camera_src_get_type(void);
+GType gst_nv_manual_camera_src_get_type(void);
 
 namespace ArgusSamples {
 
@@ -204,15 +195,15 @@ namespace ArgusSamples {
  * 'threadExecute' and 'threadShutdown'. This class handles the transition
  * between the thread states.
  */
-class ThreadArgus {
+class ThreadManual {
  public:
-  ThreadArgus();
-  virtual ~ThreadArgus();
+  ThreadManual();
+  virtual ~ThreadManual();
 
   /**
    * Initialize
    */
-  bool initialize(GstNvArgusCameraSrc*);
+  bool initialize(GstNvManualCameraSrc*);
   /**
    * Shutdown
    */
@@ -225,12 +216,12 @@ class ThreadArgus {
    */
   bool waitRunning(useconds_t timeoutUs = 5 * 1000 * 1000);
 
-  GstNvArgusCameraSrc* src;
+  GstNvManualCameraSrc* src;
 
  protected:
-  virtual bool threadInitialize(GstNvArgusCameraSrc*) = 0;
-  virtual bool threadExecute(GstNvArgusCameraSrc*) = 0;
-  virtual bool threadShutdown(GstNvArgusCameraSrc*) = 0;
+  virtual bool threadInitialize(GstNvManualCameraSrc*) = 0;
+  virtual bool threadExecute(GstNvManualCameraSrc*) = 0;
+  virtual bool threadShutdown(GstNvManualCameraSrc*) = 0;
 
   /**
    * Request thread shutdown
@@ -257,7 +248,7 @@ class ThreadArgus {
   };
   Ordered<ThreadState> m_threadState;
 
-  bool threadFunction(GstNvArgusCameraSrc*);
+  bool threadFunction(GstNvManualCameraSrc*);
 
   static void* threadFunctionStub(void* dataPtr);
 };
@@ -266,4 +257,4 @@ class ThreadArgus {
 
 G_END_DECLS
 
-#endif /* __GST_NVARGUSCAMERASRC_H__ */
+#endif /* A96C5A45_3E9B_445B_B3AD_E5A1F2FA13C8 */

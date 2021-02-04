@@ -26,8 +26,8 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef GSTNVARGUSCAMERA_UTILS_H_
-#define GSTNVARGUSCAMERA_UTILS_H_
+#ifndef B61F7423_3531_4016_9B09_EA5EDB1BB49D
+#define B61F7423_3531_4016_9B09_EA5EDB1BB49D
 
 #include <gst/gst.h>
 
@@ -36,58 +36,58 @@ extern "C" {
 #endif
 
 typedef enum {
-  NvArgusCamAwbMode_Off = 0,
-  NvArgusCamAwbMode_Auto,
-  NvArgusCamAwbMode_Incandescent,
-  NvArgusCamAwbMode_Fluorescent,
-  NvArgusCamAwbMode_WarmFluorescent,
-  NvArgusCamAwbMode_Daylight,
-  NvArgusCamAwbMode_CloudyDaylight,
-  NvArgusCamAwbMode_Twilight,
-  NvArgusCamAwbMode_Shade,
-  NvArgusCamAwbMode_Manual,
+  NvManualCamAwbMode_Off = 0,
+  NvManualCamAwbMode_Auto,
+  NvManualCamAwbMode_Incandescent,
+  NvManualCamAwbMode_Fluorescent,
+  NvManualCamAwbMode_WarmFluorescent,
+  NvManualCamAwbMode_Daylight,
+  NvManualCamAwbMode_CloudyDaylight,
+  NvManualCamAwbMode_Twilight,
+  NvManualCamAwbMode_Shade,
+  NvManualCamAwbMode_Manual,
 
-} NvArgusCamAwbMode;
-
-typedef enum {
-  NvArgusCamNoiseReductionMode_Off = 0,
-  NvArgusCamNoiseReductionMode_Fast,
-  NvArgusCamNoiseReductionMode_HighQuality
-
-} NvArgusCamNoiseReductionMode;
+} NvManualCamAwbMode;
 
 typedef enum {
-  NvArgusCamEdgeEnhancementMode_Off = 0,
-  NvArgusCamEdgeEnhancementMode_Fast,
-  NvArgusCamEdgeEnhancementMode_HighQuality
+  NvManualCamNoiseReductionMode_Off = 0,
+  NvManualCamNoiseReductionMode_Fast,
+  NvManualCamNoiseReductionMode_HighQuality
 
-} NvArgusCamEdgeEnhancementMode;
+} NvManualCamNoiseReductionMode;
 
 typedef enum {
-  NvArgusCamAeAntibandingMode_Off = 0,
-  NvArgusCamAeAntibandingMode_Auto,
-  NvArgusCamAeAntibandingMode_50HZ,
-  NvArgusCamAeAntibandingMode_60HZ
+  NvManualCamEdgeEnhancementMode_Off = 0,
+  NvManualCamEdgeEnhancementMode_Fast,
+  NvManualCamEdgeEnhancementMode_HighQuality
 
-} NvArgusCamAeAntibandingMode;
+} NvManualCamEdgeEnhancementMode;
 
-GType gst_nvarguscam_white_balance_mode_get_type(void);
-#define GST_TYPE_NVARGUSCAM_WB_MODE \
-  (gst_nvarguscam_white_balance_mode_get_type())
+typedef enum {
+  NvManualCamAeAntibandingMode_Off = 0,
+  NvManualCamAeAntibandingMode_Auto,
+  NvManualCamAeAntibandingMode_50HZ,
+  NvManualCamAeAntibandingMode_60HZ
 
-GType gst_nvarguscam_tnr_mode_get_type(void);
-#define GST_TYPE_NVARGUSCAM_TNR_MODE (gst_nvarguscam_tnr_mode_get_type())
+} NvManualCamAeAntibandingMode;
 
-GType gst_nvarguscam_edge_enhancement_mode_get_type(void);
-#define GST_TYPE_NVARGUSCAM_EDGE_ENHANCEMENT_MODE \
-  (gst_nvarguscam_edge_enhancement_mode_get_type())
+GType gst_nvmanualcam_white_balance_mode_get_type(void);
+#define GST_TYPE_NVMANUALCAM_WB_MODE \
+  (gst_nvmanualcam_white_balance_mode_get_type())
 
-GType gst_nvarguscam_aeantibanding_mode_get_type(void);
-#define GST_TYPE_NVARGUSCAM_AEANTIBANDING_MODE \
-  (gst_nvarguscam_aeantibanding_mode_get_type())
+GType gst_nvmanualcam_tnr_mode_get_type(void);
+#define GST_TYPE_NVMANUALCAM_TNR_MODE (gst_nvmanualcam_tnr_mode_get_type())
+
+GType gst_nvmanualcam_edge_enhancement_mode_get_type(void);
+#define GST_TYPE_NVMANUALCAM_EDGE_ENHANCEMENT_MODE \
+  (gst_nvmanualcam_edge_enhancement_mode_get_type())
+
+GType gst_nvmanualcam_aeantibanding_mode_get_type(void);
+#define GST_TYPE_NVMANUALCAM_AEANTIBANDING_MODE \
+  (gst_nvmanualcam_aeantibanding_mode_get_type())
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* GSTNVARGUSCAMERA_UTILS_H_ */
+#endif /* B61F7423_3531_4016_9B09_EA5EDB1BB49D */

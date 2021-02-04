@@ -25,8 +25,8 @@
  *
  */
 
-#ifndef NVBUFSURFACE_H_
-#define NVBUFSURFACE_H_
+#ifndef BC23A841_25CE_4F6D_9FC6_69ECD211B12E
+#define BC23A841_25CE_4F6D_9FC6_69ECD211B12E
 
 #include <stdbool.h>
 #include <stdint.h>
@@ -504,4 +504,4 @@ int NvBufSurfaceUnMapEglImage(NvBufSurface* surf, int index);
 #ifdef __cplusplus
 }
 #endif
-#endif /* NVBUFSURFACE_H_ */
+#endif /* BC23A841_25CE_4F6D_9FC6_69ECD211B12E */

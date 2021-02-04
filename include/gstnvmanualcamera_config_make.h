@@ -26,22 +26,14 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef A6479C9D_8364_49AA_B5B3_889C52B6889D
-#define A6479C9D_8364_49AA_B5B3_889C52B6889D
+#ifndef E0CAA875_7EE8_4F6B_9A1C_99C2CF152440
+#define E0CAA875_7EE8_4F6B_9A1C_99C2CF152440
 
-/* PACKAGE: this is usually set by autotools depending on some _INIT macro
- * in configure.ac and then written into and defined in config.h, but we can
- * just set it ourselves here in case someone doesn't use autotools to
- * compile this code. GST_PLUGIN_DEFINE needs PACKAGE to be defined.
- */
-#ifndef PACKAGE
-#define PACKAGE "nvarguscamerasrc"
-#endif
+// If the version is modified, don't forget to change it in the VERSION file
+#define PROJ_VER "1.1.0"
+#define PROJ_DESCRIPTION "nVidia MANUAL Camera Source"
+#define BINARY_PACKAGE "NvMANUALCameraSrc"
+#define PROJ_URL "https://github.com/mdegans/gst-nvmanualcamerasrc"
+#define LICENSE "Proprietary"
 
-#ifdef MESON
-#include "gstnvarguscamera_config_meson.h"
-#else
-#include "gstnvarguscamera_config_make.h"
-#endif
-
-#endif /* A6479C9D_8364_49AA_B5B3_889C52B6889D */
+#endif /* E0CAA875_7EE8_4F6B_9A1C_99C2CF152440 */
