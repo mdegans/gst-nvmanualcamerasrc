@@ -17,7 +17,7 @@ gst-launch-1.0 nvmanualcamerasrc num_buffers=1 \
   ! nvvidconv ! "video/x-raw, format=RGBA" \
   ! pngenc ! filesink location=out.png || true
 
-rm *.pdf
+rm -f *.pdf
 
 for dotfile in *.dot ; do
   dot -Tpdf "$dotfile" > "$(basename "${dotfile/.dot}")".pdf || true
