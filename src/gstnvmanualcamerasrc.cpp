@@ -1172,12 +1172,15 @@ static gboolean gst_nv_manual_camera_set_caps(GstBaseSrc* base, GstCaps* caps) {
   GstNvManualCameraSrc* src = GST_NVMANUALCAMERASRC(base);
   // write own allocator here
 
-  GST_DEBUG_OBJECT(src, "Received caps %" GST_PTR_FORMAT, caps);
+  GST_INFO_OBJECT(src, "Received caps %" GST_PTR_FORMAT, caps);
 
   if (!gst_video_info_from_caps(&src->info, caps)) {
     GST_ERROR_OBJECT(src, "could not get GstVideoInfo from GstCaps");
     return FALSE;
   }
+
+  GST_INFO_OBJECT(src, "CAPS: res: %dx%d fps: %d/%d", src->info.width,
+                  src->info.height, src->info.fps_n, src->info.fps_d);
 
   // recalculate frame duration
   src->frame_duration = get_frame_duration(src->info);
