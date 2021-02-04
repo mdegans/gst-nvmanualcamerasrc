@@ -80,12 +80,26 @@ static const float MAX_DIGITAL_GAIN = 256.0f;
 
 static const char* GST_NVMANUAL_MEMORY_TYPE = "nvarguscam";
 
-static const int DEFAULT_FPS = 30;       // mostly ignored, deprecated
+static const int DEFAULT_FPS = 21;       // mostly ignored, deprecated
 static const int DEFAULT_HEIGHT = 1080;  // mostly ignored, deprecated
 static const int DEFAULT_WIDTH = 1920;   // mostly ignored, deprecated
 
 GST_DEBUG_CATEGORY_STATIC(gst_nvmanualcamerasrc_debug);
 #define GST_CAT_DEFAULT gst_nvmanualcamerasrc_debug
+
+// begin helpers
+
+/**
+ * @brief Get the frame duration in nanoseconds from a GstVideoInfo.
+ *
+ * @param info a GstVideoInfo structure
+ * @return uint64_t duration of one frame in nanoseconds
+ */
+static uint64_t get_frame_duration(const GstVideoInfo& info) {
+  return (uint64_t)1e9 * info.fps_d / info.fps_n;
+}
+
+// end helpers
 
 #ifdef __cplusplus
 extern "C" {
@@ -200,11 +214,9 @@ namespace ManualCamera {
 
 // Constants
 
-#define GST_MANUAL_PRINT(...) GST_INFO("GST_MANUAL: " __VA_ARGS__)
+#define PRODUCER_PRINT(...) GST_INFO("PRODUCER: " __VA_ARGS__)
 #define CONSUMER_PRINT(...) GST_INFO("CONSUMER: " __VA_ARGS__)
-#define GST_MANUAL_ERROR(...)                                         \
-  GST_ERROR("MANUAL_ERROR: Error generated. %s, %s: %d %s", __FILE__, \
-            __FUNCTION__, __LINE__, __VA_ARGS__)
+#define PRODUCER_ERROR(...) GST_ERROR("PRODUCER: " __VA_ARGS__)
 
 /*******************************************************************************
  * StreamConsumer thread:
@@ -513,6 +525,7 @@ static bool execute(int32_t cameraIndex,
                     const Size2D<uint32_t>& streamSize,
                     int32_t secToRun,
                     GstNvManualCameraSrc* src) {
+  GST_INFO("starting producer thread");
   gfloat frameRate = 0;
   uint32_t index = 0;
   gint found = 0;
@@ -545,7 +558,7 @@ static bool execute(int32_t cameraIndex,
     ORIGINATE_ERROR("Failed to create CaptureSession");
 
   src->iCaptureSession_ptr = iCaptureSession;
-  GST_MANUAL_PRINT("Creating output stream");
+  PRODUCER_PRINT("Creating output stream");
   UniqueObj<OutputStreamSettings> streamSettings(
       iCaptureSession->createOutputStreamSettings(STREAM_TYPE_EGL));
   IEGLOutputStreamSettings* iStreamSettings =
@@ -597,8 +610,9 @@ static bool execute(int32_t cameraIndex,
 
   src->total_sensor_modes = modes.size();
 
-  GST_MANUAL_PRINT("Available Sensor modes :");
+  PRODUCER_PRINT("Available Sensor modes :");
   frameRate = src->info.fps_n / src->info.fps_d;
+  src->frame_duration = get_frame_duration(src->info);
   ISensorMode* iSensorMode[modes.size()];
   Range<float> sensorModeAnalogGainRange;
   Range<float> ispDigitalGainRange;
@@ -607,7 +621,7 @@ static bool execute(int32_t cameraIndex,
     iSensorMode[index] = interface_cast<ISensorMode>(modes[index]);
     sensorModeAnalogGainRange = iSensorMode[index]->getAnalogGainRange();
     limitExposureTimeRange = iSensorMode[index]->getExposureTimeRange();
-    GST_MANUAL_PRINT(
+    PRODUCER_PRINT(
         "%d x %d FR = %f fps Duration = %lu ; Analog Gain range min %f, max "
         "%f; Exposure Range min %ju, max %ju;",
         iSensorMode[index]->getResolution().width(),
@@ -644,8 +658,8 @@ static bool execute(int32_t cameraIndex,
       /* As request resolution is not supported, switch to default
        * sensormode Index.
        */
-      GST_INFO_OBJECT(
-          src, " Requested resolution W = %d H = %d not supported by Sensor.",
+      PRODUCER_PRINT(
+          "Requested resolution W = %d H = %d not supported by Sensor.",
           streamSize.width(), streamSize.height());
       cameraMode = 0;
     } else {
@@ -658,7 +672,9 @@ static bool execute(int32_t cameraIndex,
   if (frameRate >
       round((1e9 / (iSensorMode[cameraMode]->getFrameDurationRange().min())))) {
     src->manual_in_error = TRUE;
-    GST_MANUAL_ERROR("Frame Rate specified is greater than supported");
+    GST_ERROR_OBJECT(src,
+                     "Frame Rate specified (%d/%d) is greater than supported.",
+                     src->info.fps_n, src->info.fps_d);
   }
 
   IDenoiseSettings* denoiseSettings = interface_cast<IDenoiseSettings>(request);
@@ -766,7 +782,7 @@ static bool execute(int32_t cameraIndex,
     src->aeLockPropSet = FALSE;
   }
 
-  GST_MANUAL_PRINT(
+  PRODUCER_PRINT(
       "Running with following settings:\n"
       "   Camera index = %d \n"
       "   Camera mode  = %d \n"
@@ -853,10 +869,9 @@ static bool execute(int32_t cameraIndex,
   requestSourceSettings->setFrameDurationRange(
       Range<uint64_t>(1e9 / frameRate));
 
-  GST_MANUAL_PRINT("Setup Complete, Starting captures for %d seconds",
-                   secToRun);
+  PRODUCER_PRINT("Setup Complete, Starting captures for %d seconds", secToRun);
 
-  GST_MANUAL_PRINT("Starting repeat capture requests.");
+  PRODUCER_PRINT("Starting repeat capture requests.");
   Request* captureRequest = request.get();
   src->request_ptr = captureRequest;
   iCaptureSession->capture(captureRequest);
@@ -864,7 +879,7 @@ static bool execute(int32_t cameraIndex,
     ORIGINATE_ERROR("Failed to start capture request");
 
   if (src->manual_in_error) {
-    GST_MANUAL_ERROR("InvalidState.");
+    PRODUCER_ERROR("InvalidState.");
     iCaptureSession->cancelRequests();
     src->timeout = 1;
   } else if (secToRun != 0) {
@@ -878,7 +893,7 @@ static bool execute(int32_t cameraIndex,
     }
   }
 
-  GST_MANUAL_PRINT("Cleaning up");
+  PRODUCER_PRINT("Cleaning up");
 
   iCaptureSession->stopRepeat();
   iCaptureSession->waitForIdle();
@@ -900,7 +915,7 @@ static bool execute(int32_t cameraIndex,
   if (src->manual_in_error)
     return false;
 
-  GST_MANUAL_PRINT("Done Success");
+  PRODUCER_PRINT("Done Success");
 
   return true;
 }
@@ -1150,16 +1165,6 @@ static GstCaps* gst_nv_manual_camera_fixate(GstBaseSrc* src, GstCaps* caps) {
              ->fixate(src, caps);
 
   return caps;
-}
-
-/**
- * @brief Get the frame duration in nanoseconds from a GstVideoInfo.
- *
- * @param info a GstVideoInfo structure
- * @return uint64_t duration of one frame in nanoseconds
- */
-static uint64_t get_frame_duration(const GstVideoInfo& info) {
-  return (uint64_t)1e9 * info.fps_d / info.fps_n;
 }
 
 static gboolean gst_nv_manual_camera_set_caps(GstBaseSrc* base, GstCaps* caps) {
@@ -1430,96 +1435,6 @@ static GstFlowReturn gst_nv_manual_camera_create(GstBaseSrc* src_base,
 
   return ret;
 }
-
-// static gboolean set_range(GstNvManualCameraSrc* src, guint prop_id) {
-//   gchar** tokens;
-//   gchar** temp;
-//   gchar* token;
-//   gfloat array[2];
-//   gint index = 0;
-//   gfloat val;
-//   gboolean ret;
-//   gchar* str;
-//   NvManualCameraRange range;
-
-//   if (prop_id == PROP_GAIN_RANGE) {
-//     str = src->gainRangeString;
-//     GST_MANUAL_PRINT("NvManualCameraSrc: Setting Gain Range : %s", str);
-//   } else if (prop_id == PROP_EXPOSURE_TIME_RANGE) {
-//     str = src->exposureTimeString;
-//     GST_MANUAL_PRINT("NvManualCameraSrc: Setting Exposure Time Range : %s",
-//                      str);
-//   } else if (prop_id == PROP_DIGITAL_GAIN_RANGE) {
-//     str = src->ispDigitalGainRangeString;
-//     GST_MANUAL_PRINT("NvManualCameraSrc: Setting ISP Digital Gain Range :
-//     %s",
-//                      str);
-//   } else {
-//     GST_MANUAL_PRINT("NvManualCameraSrc: property not defined");
-//     return FALSE;
-//   }
-
-//   if (!str)
-//     return FALSE;
-
-//   tokens = g_strsplit_set(str, " \"\'", -1);
-//   temp = tokens;
-//   while (*temp) {
-//     token = *temp++;
-//     if (!g_strcmp0(token, ""))
-//       continue;
-
-//     if (index == 2) {
-//       GST_MANUAL_PRINT("Invalid Range Input");
-//       ret = FALSE;
-//       goto done;
-//     }
-
-//     val = atof(token);
-//     array[index++] = val;
-//   }
-//   if (index == 2) {
-//     if (prop_id == PROP_GAIN_RANGE) {
-//       if (array[0] < MIN_GAIN || array[1] > MAX_GAIN) {
-//         GST_MANUAL_PRINT("Invalid Gain Range Input");
-//         ret = FALSE;
-//         goto done;
-//       }
-//       range.low = array[0];
-//       range.high = array[1];
-//       src->controls.gainRange = range;
-//     } else if (prop_id == PROP_EXPOSURE_TIME_RANGE) {
-//       if (array[0] < MIN_EXPOSURE_TIME || array[1] > MAX_EXPOSURE_TIME) {
-//         GST_MANUAL_PRINT("Invalid Exposure Time Range Input");
-//         ret = FALSE;
-//         goto done;
-//       }
-//       range.low = array[0];
-//       range.high = array[1];
-//       src->controls.exposureTimeRange = range;
-//     } else if (prop_id == PROP_DIGITAL_GAIN_RANGE) {
-//       if (array[0] < MIN_DIGITAL_GAIN || array[1] > MAX_DIGITAL_GAIN) {
-//         GST_MANUAL_PRINT("Invalid ISP Digital Gain Range Input");
-//         ret = FALSE;
-//         goto done;
-//       }
-//       range.low = array[0];
-//       range.high = array[1];
-//       src->controls.ispDigitalGainRange = range;
-//     } else {
-//       GST_MANUAL_PRINT("NvManualCameraSrc: property not defined");
-//       return FALSE;
-//     }
-//   } else {
-//     GST_MANUAL_PRINT("Need two values to set range");
-//     ret = FALSE;
-//     goto done;
-//   }
-//   ret = TRUE;
-// done:
-//   g_strfreev(tokens);
-//   return ret;
-// }
 
 /* initialize the nvmanualcamerasrc's class */
 static void gst_nv_manual_camera_src_class_init(
