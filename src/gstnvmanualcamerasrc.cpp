@@ -48,18 +48,17 @@
 #include <cstdlib>
 
 #include <Argus/Argus.h>
-#include <Ordered.h>
 #include <Error.h>
+#include <Ordered.h>
 
 #include <EGLStream/EGLStream.h>
 #include <EGLStream/NV/ImageNativeBuffer.h>
 #include <math.h>
+#include <unistd.h>
 #include <fstream>
 #include <iostream>
-#include <unistd.h>
 
 #include <pthread.h>
-
 
 static const char* CAPTURE_CAPS =
     "video/x-raw(memory:NVMM), "

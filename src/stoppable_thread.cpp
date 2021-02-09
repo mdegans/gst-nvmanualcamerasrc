@@ -131,4 +131,4 @@ bool StoppableThread::threadFunction(GstNvManualCameraSrc* src) {
   return true;
 }
 
-};  // namespace ArgusSamples
+};  // namespace nvmanualcam::utils

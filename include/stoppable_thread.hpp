@@ -74,7 +74,8 @@ class StoppableThread {
   }
 
   // FIXME(mdegans): replace with std::atomic or similar, pthread with std
-  ArgusSamples::Ordered<bool> m_doShutdown;  ///< set to request shutdown of the thread
+  ArgusSamples::Ordered<bool>
+      m_doShutdown;  ///< set to request shutdown of the thread
 
  private:
   pthread_t m_threadID;  ///< thread ID
@@ -96,4 +97,4 @@ class StoppableThread {
   static void* threadFunctionStub(void* dataPtr);
 };
 
-}  // namespace ArgusSamples
+}  // namespace nvmanualcam::utils
