@@ -111,18 +111,18 @@ using namespace EGLStream;
 
 namespace ArgusSamples {
 
-ThreadManual::ThreadManual()
+StoppableThread::StoppableThread()
     : m_doShutdown(false),
       m_threadID(0),
       m_threadState(THREAD_INACTIVE)
 
 {}
 
-ThreadManual::~ThreadManual() {
+StoppableThread::~StoppableThread() {
   (void)shutdown();
 }
 
-bool ThreadManual::initialize(GstNvManualCameraSrc* src) {
+bool StoppableThread::initialize(GstNvManualCameraSrc* src) {
   if (m_threadID)
     return true;
 
@@ -138,7 +138,7 @@ bool ThreadManual::initialize(GstNvManualCameraSrc* src) {
   return true;
 }
 
-bool ThreadManual::shutdown() {
+bool StoppableThread::shutdown() {
   if (m_threadID) {
     m_doShutdown = true;
     if (pthread_join(m_threadID, NULL) != 0)
@@ -151,7 +151,7 @@ bool ThreadManual::shutdown() {
   return true;
 }
 
-bool ThreadManual::waitRunning(useconds_t timeoutUs) {
+bool StoppableThread::waitRunning(useconds_t timeoutUs) {
   // Can only wait for a thread which is initializing or already running
   if ((m_threadState != THREAD_INITIALIZING) &&
       (m_threadState != THREAD_RUNNING))
@@ -178,13 +178,13 @@ bool ThreadManual::waitRunning(useconds_t timeoutUs) {
  *
  * @param [in] dataPtr  Pointer to user data
  */
-/* static */ void* ThreadManual::threadFunctionStub(void* dataPtr) {
-  ThreadManual* thread = static_cast<ThreadManual*>(dataPtr);
+/* static */ void* StoppableThread::threadFunctionStub(void* dataPtr) {
+  StoppableThread* thread = static_cast<StoppableThread*>(dataPtr);
 
   if (!thread->threadFunction(thread->src))
-    thread->m_threadState = ThreadManual::THREAD_FAILED;
+    thread->m_threadState = StoppableThread::THREAD_FAILED;
   else
-    thread->m_threadState = ThreadManual::THREAD_DONE;
+    thread->m_threadState = StoppableThread::THREAD_DONE;
 
   return NULL;
 }
@@ -192,7 +192,7 @@ bool ThreadManual::waitRunning(useconds_t timeoutUs) {
 /**
  * Thread function
  */
-bool ThreadManual::threadFunction(GstNvManualCameraSrc* src) {
+bool StoppableThread::threadFunction(GstNvManualCameraSrc* src) {
   m_threadState = THREAD_INITIALIZING;
 
   PROPAGATE_ERROR(threadInitialize(src));
@@ -223,7 +223,7 @@ namespace ManualCamera {
  *   Creates a StreamConsumer object to read frames from the OutputStream just
  *tests for sanity.
  ******************************************************************************/
-class StreamConsumer : public ArgusSamples::ThreadManual {
+class StreamConsumer : public ArgusSamples::StoppableThread {
  public:
   explicit StreamConsumer(OutputStream* stream) : m_stream(stream) {}
   ~StreamConsumer() {}

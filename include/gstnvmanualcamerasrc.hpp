@@ -195,10 +195,10 @@ namespace ArgusSamples {
  * 'threadExecute' and 'threadShutdown'. This class handles the transition
  * between the thread states.
  */
-class ThreadManual {
+class StoppableThread {
  public:
-  ThreadManual();
-  virtual ~ThreadManual();
+  StoppableThread();
+  virtual ~StoppableThread();
 
   /**
    * Initialize
