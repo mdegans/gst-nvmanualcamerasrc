@@ -51,6 +51,7 @@ gstnvmanualcamearsrc_deps = [
 gstnvmanualcameasrc_src = [
   'gstnvmanualcamera_utils.cpp',
   'gstnvmanualcamerasrc.cpp',
+  'stoppable_thread.cpp',
   'plugin.cpp',
 ]
 

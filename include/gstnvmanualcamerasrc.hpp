@@ -34,8 +34,6 @@
 #include "nvbuf_utils.h"
 #include "nvbufsurface.h"
 
-#include "Ordered.h"
-
 #include <gst/base/gstbasesrc.h>
 #include <gst/gst.h>
 #include <gst/video/video.h>
@@ -187,73 +185,6 @@ struct _GstNvManualCameraSrcClass {
 };
 
 GType gst_nv_manual_camera_src_get_type(void);
-
-namespace ArgusSamples {
-
-/**
- * Base class for threads. Derived classes need to implement 'threadInitialize',
- * 'threadExecute' and 'threadShutdown'. This class handles the transition
- * between the thread states.
- */
-class StoppableThread {
- public:
-  StoppableThread();
-  virtual ~StoppableThread();
-
-  /**
-   * Initialize
-   */
-  bool initialize(GstNvManualCameraSrc*);
-  /**
-   * Shutdown
-   */
-  bool shutdown();
-
-  /**
-   * Wait until the thread is in 'running' state
-   *
-   * @param timeout [in] timeout in us
-   */
-  bool waitRunning(useconds_t timeoutUs = 5 * 1000 * 1000);
-
-  GstNvManualCameraSrc* src;
-
- protected:
-  virtual bool threadInitialize(GstNvManualCameraSrc*) = 0;
-  virtual bool threadExecute(GstNvManualCameraSrc*) = 0;
-  virtual bool threadShutdown(GstNvManualCameraSrc*) = 0;
-
-  /**
-   * Request thread shutdown
-   */
-  bool requestShutdown() {
-    m_doShutdown = true;
-    return true;
-  }
-
-  Ordered<bool> m_doShutdown;  ///< set to request shutdown of the thread
-
- private:
-  pthread_t m_threadID;  ///< thread ID
-
-  /**
-   * Thread states
-   */
-  enum ThreadState {
-    THREAD_INACTIVE,      ///< is inactive
-    THREAD_INITIALIZING,  ///< is initializing
-    THREAD_RUNNING,       ///< is running
-    THREAD_FAILED,        ///< has failed
-    THREAD_DONE,          ///< execution done
-  };
-  Ordered<ThreadState> m_threadState;
-
-  bool threadFunction(GstNvManualCameraSrc*);
-
-  static void* threadFunctionStub(void* dataPtr);
-};
-
-}  // namespace ArgusSamples
 
 G_END_DECLS
 

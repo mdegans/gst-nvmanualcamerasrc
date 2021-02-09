@@ -39,25 +39,27 @@
 #include <config.h>
 #endif
 
+#include "gstnvmanualcamerasrc.hpp"
+#include "stoppable_thread.hpp"
+
 #include <gst/base/gstbasesrc.h>
 #include <gst/gst.h>
 #include <gst/video/video.h>
 #include <cstdlib>
 
 #include <Argus/Argus.h>
+#include <Ordered.h>
+#include <Error.h>
+
 #include <EGLStream/EGLStream.h>
 #include <EGLStream/NV/ImageNativeBuffer.h>
 #include <math.h>
 #include <fstream>
 #include <iostream>
+#include <unistd.h>
 
 #include <pthread.h>
-#include <unistd.h>  // for useconds_t
 
-#include "Ordered.h"
-
-#include "Error.h"
-#include "gstnvmanualcamerasrc.hpp"
 
 static const char* CAPTURE_CAPS =
     "video/x-raw(memory:NVMM), "
@@ -109,107 +111,6 @@ using namespace std;
 using namespace Argus;
 using namespace EGLStream;
 
-namespace ArgusSamples {
-
-StoppableThread::StoppableThread()
-    : m_doShutdown(false),
-      m_threadID(0),
-      m_threadState(THREAD_INACTIVE)
-
-{}
-
-StoppableThread::~StoppableThread() {
-  (void)shutdown();
-}
-
-bool StoppableThread::initialize(GstNvManualCameraSrc* src) {
-  if (m_threadID)
-    return true;
-
-  this->src = src;
-
-  if (pthread_create(&m_threadID, NULL, threadFunctionStub, this) != 0)
-    ORIGINATE_ERROR("Failed to create thread.");
-
-  // wait for the thread to start up
-  while (m_threadState == THREAD_INACTIVE)
-    usleep(100);
-
-  return true;
-}
-
-bool StoppableThread::shutdown() {
-  if (m_threadID) {
-    m_doShutdown = true;
-    if (pthread_join(m_threadID, NULL) != 0)
-      ORIGINATE_ERROR("Failed to join thread");
-    m_threadID = 0;
-    m_doShutdown = false;
-    m_threadState = THREAD_INACTIVE;
-  }
-
-  return true;
-}
-
-bool StoppableThread::waitRunning(useconds_t timeoutUs) {
-  // Can only wait for a thread which is initializing or already running
-  if ((m_threadState != THREAD_INITIALIZING) &&
-      (m_threadState != THREAD_RUNNING))
-    ORIGINATE_ERROR("Invalid thread state %d", m_threadState.get());
-
-  // wait for the thread to run
-  const useconds_t sleepTimeUs = 100;
-  while (m_threadState != THREAD_RUNNING) {
-    usleep(sleepTimeUs);
-#ifdef DEBUG
-    // in debug mode wait indefinitely
-#else
-    if (timeoutUs < sleepTimeUs)
-      return false;
-    timeoutUs -= sleepTimeUs;
-#endif
-  }
-
-  return true;
-}
-
-/**
- * Thread function stub, calls the real thread function.
- *
- * @param [in] dataPtr  Pointer to user data
- */
-/* static */ void* StoppableThread::threadFunctionStub(void* dataPtr) {
-  StoppableThread* thread = static_cast<StoppableThread*>(dataPtr);
-
-  if (!thread->threadFunction(thread->src))
-    thread->m_threadState = StoppableThread::THREAD_FAILED;
-  else
-    thread->m_threadState = StoppableThread::THREAD_DONE;
-
-  return NULL;
-}
-
-/**
- * Thread function
- */
-bool StoppableThread::threadFunction(GstNvManualCameraSrc* src) {
-  m_threadState = THREAD_INITIALIZING;
-
-  PROPAGATE_ERROR(threadInitialize(src));
-
-  m_threadState = THREAD_RUNNING;
-
-  while (!m_doShutdown) {
-    PROPAGATE_ERROR(threadExecute(src));
-  }
-
-  PROPAGATE_ERROR(threadShutdown(src));
-
-  return true;
-}
-
-};  // namespace ArgusSamples
-
 namespace ManualCamera {
 
 // Constants
@@ -223,7 +124,7 @@ namespace ManualCamera {
  *   Creates a StreamConsumer object to read frames from the OutputStream just
  *tests for sanity.
  ******************************************************************************/
-class StreamConsumer : public ArgusSamples::StoppableThread {
+class StreamConsumer : public nvmanualcam::utils::StoppableThread {
  public:
   explicit StreamConsumer(OutputStream* stream) : m_stream(stream) {}
   ~StreamConsumer() {}
