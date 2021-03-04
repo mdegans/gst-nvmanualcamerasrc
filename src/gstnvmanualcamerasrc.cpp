@@ -995,8 +995,10 @@ static gpointer consumer_thread(gpointer src_base) {
   }
 done:
   GST_DEBUG_OBJECT(src, "%s: stop_requested=%d", __func__, src->stop_requested);
-  gst_mini_object_set_qdata(GST_MINI_OBJECT_CAST(buffer),
-                            gst_buffer_metadata_quark, NULL, NULL);
+  if (buffer) {
+    gst_mini_object_set_qdata(GST_MINI_OBJECT_CAST(buffer),
+                              gst_buffer_metadata_quark, NULL, NULL);
+  }
   return NULL;
 }
 
