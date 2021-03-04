@@ -55,22 +55,25 @@ G_BEGIN_DECLS
 
 namespace nvmanualcam::defaults {
 
-const auto WB_MODE = NvManualCamAwbMode_Auto;
-const float SATURATION = 1.0;
-const float EXPOSURE_TIME = 1.0;
-const uint SENSOR_ID = 0;
-const int SENSOR_MODE_STATE = -1;
-const uint TOTAL_SENSOR_MODES = 0;
-const float GAIN = 1.0f;
-const float DIGITAL_GAIN = 1.0f;
-const auto TNR_MODE = NvManualCamNoiseReductionMode_Off;
-const float TNR_STRENGTH = -1.0;
-const auto EE_MODE = NvManualCamEdgeEnhancementMode_Off;
-const float EE_STRENGTH = -1.0;
 const auto AEANTIBANDING_MODE = NvManualCamAeAntibandingMode_Off;
-const float EXP_COMPENSATION = 0.0;
+const auto EE_MODE = NvManualCamEdgeEnhancementMode_Off;
+const auto TNR_MODE = NvManualCamNoiseReductionMode_Off;
+const auto WB_MODE = NvManualCamAwbMode_Auto;
 const bool AE_LOCK = false;
 const bool AWB_LOCK = false;
+const bool BUFAPI = false;
+const bool SILENT = false;
+const float DIGITAL_GAIN = 1.0f;
+const float EE_STRENGTH = -1.0;
+const float EXP_COMPENSATION = 0.0;
+const float EXPOSURE_TIME = 1.0;
+const float GAIN = 1.0f;
+const float SATURATION = 1.0;
+const float TNR_STRENGTH = -1.0;
+const int SENSOR_MODE_STATE = -1;
+const uint SENSOR_ID = 0;
+const uint TIMEOUT = 0;
+const uint TOTAL_SENSOR_MODES = 0;
 
 }  // namespace nvmanualcam::defaults
 

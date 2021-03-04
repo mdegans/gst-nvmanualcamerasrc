@@ -1073,7 +1073,8 @@ static void gst_nv_manual_camera_src_class_init(
   g_object_class_install_property(
       gobject_class, PROP_SILENT,
       g_param_spec_boolean(
-          "silent", "Silent", "Less logging when true. Mostly unused.", false,
+          "silent", "Silent", "Less logging when true. Mostly unused.",
+          nvmanualcam::defaults::SILENT,
           (GParamFlags)(G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS)));
 
   g_object_class_install_property(
@@ -1082,7 +1083,7 @@ static void gst_nv_manual_camera_src_class_init(
           "timeout", "Timeout",
           "timeout to capture in seconds (Either specify timeout "
           "or num-buffers, not both)",
-          0, G_MAXINT, 0,
+          0, G_MAXINT, nvmanualcam::defaults::TIMEOUT,
           (GParamFlags)(G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS)));
 
   g_object_class_install_property(
@@ -1120,7 +1121,7 @@ static void gst_nv_manual_camera_src_class_init(
       gobject_class, PROP_EXPOSURE_REAL,
       g_param_spec_uint64(
           "exposurereal", "Real Exposure Time", "Actual exposure time in ns.",
-          0, G_MAXUINT64, 0,
+          0, G_MAXUINT64, 0,  // default is 0 becase this is a read-only prop
           (GParamFlags)(G_PARAM_READABLE | G_PARAM_STATIC_STRINGS)));
 
   g_object_class_install_property(
@@ -1190,21 +1191,21 @@ static void gst_nv_manual_camera_src_class_init(
 
   g_object_class_install_property(
       gobject_class, PROP_AE_LOCK,
-      g_param_spec_boolean("aelock", "AE Lock",
-                           "set or unset the auto exposure lock", FALSE,
-                           (GParamFlags)G_PARAM_READWRITE));
+      g_param_spec_boolean(
+          "aelock", "AE Lock", "set or unset the auto exposure lock",
+          nvmanualcam::defaults::AE_LOCK, (GParamFlags)G_PARAM_READWRITE));
 
   g_object_class_install_property(
       gobject_class, PROP_AWB_LOCK,
-      g_param_spec_boolean("awblock", "AWB Lock",
-                           "set or unset the auto white balance lock", FALSE,
-                           (GParamFlags)G_PARAM_READWRITE));
+      g_param_spec_boolean(
+          "awblock", "AWB Lock", "set or unset the auto white balance lock",
+          nvmanualcam::defaults::AWB_LOCK, (GParamFlags)G_PARAM_READWRITE));
 
   g_object_class_install_property(
       gobject_class, PROP_BUFAPI,
-      g_param_spec_boolean("bufapi-version", "Buffer API",
-                           "set to use new Buffer API", FALSE,
-                           (GParamFlags)G_PARAM_READWRITE));
+      g_param_spec_boolean(
+          "bufapi-version", "Buffer API", "set to use new Buffer API",
+          nvmanualcam::defaults::BUFAPI, (GParamFlags)G_PARAM_READWRITE));
 
   gst_element_class_set_details_simple(
       gstelement_class, "NvManualCameraSrc", "Video/Capture",
