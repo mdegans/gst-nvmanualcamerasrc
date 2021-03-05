@@ -116,7 +116,7 @@ static bool execute(int32_t cameraIndex,
                     int32_t cameraMode,
                     const Size2D<uint32_t>& streamSize,
                     int32_t secToRun,
-                    GstNvManualCameraSrc* src) {
+                    GstNvManualCameraSrc* self) {
   GST_INFO("starting producer thread");
   gfloat frameRate = 0;
   uint32_t index = 0;
@@ -149,7 +149,7 @@ static bool execute(int32_t cameraIndex,
   if (!iCaptureSession)
     ORIGINATE_ERROR("Failed to create CaptureSession");
 
-  src->iCaptureSession_ptr = iCaptureSession;
+  self->iCaptureSession_ptr = iCaptureSession;
   PRODUCER_PRINT("Creating output stream");
   UniqueObj<OutputStreamSettings> streamSettings(
       iCaptureSession->createOutputStreamSettings(STREAM_TYPE_EGL));
@@ -158,7 +158,7 @@ static bool execute(int32_t cameraIndex,
   if (iStreamSettings) {
     iStreamSettings->setPixelFormat(PIXEL_FMT_YCbCr_420_888);
     iStreamSettings->setResolution(streamSize);
-    if (src->controls.meta_enabled) {
+    if (self->controls.meta_enabled) {
       iStreamSettings->setMetadataEnable(true);
     }
   }
@@ -169,7 +169,7 @@ static bool execute(int32_t cameraIndex,
     ORIGINATE_ERROR("Failed to create OutputStream");
 
   utils::Consumer consumerThread(outputStream.get());
-  PROPAGATE_ERROR(consumerThread.initialize(src));
+  PROPAGATE_ERROR(consumerThread.initialize(self));
 
   // Wait until the consumer is connected to the stream.
   PROPAGATE_ERROR(consumerThread.waitRunning());
@@ -177,14 +177,14 @@ static bool execute(int32_t cameraIndex,
   // Create capture request and enable output stream.
   UniqueObj<Request> request(iCaptureSession->createRequest());
   IRequest* iRequest = interface_cast<IRequest>(request);
-  src->iRequest_ptr = iRequest;
+  self->iRequest_ptr = iRequest;
   if (!iRequest)
     ORIGINATE_ERROR("Failed to create Request");
   iRequest->enableOutputStream(outputStream.get());
 
   IAutoControlSettings* iAutoControlSettings =
       interface_cast<IAutoControlSettings>(iRequest->getAutoControlSettings());
-  src->iAutoControlSettings_ptr = iAutoControlSettings;
+  self->iAutoControlSettings_ptr = iAutoControlSettings;
   std::vector<SensorMode*> modes;
   ICameraProperties* camProps =
       interface_cast<ICameraProperties>(cameraDevices[cameraIndex]);
@@ -196,18 +196,18 @@ static bool execute(int32_t cameraIndex,
       interface_cast<ISourceSettings>(iRequest->getSourceSettings());
   if (!requestSourceSettings)
     ORIGINATE_ERROR("Failed to get request source settings");
-  src->iRequestSourceSettings_ptr = requestSourceSettings;
+  self->iRequestSourceSettings_ptr = requestSourceSettings;
 
   if (cameraMode != nvmanualcam::defaults::SENSOR_MODE_STATE &&
       static_cast<uint32_t>(cameraMode) >= modes.size())
     ORIGINATE_ERROR("Invalid sensor mode %d selected %d present", cameraMode,
                     static_cast<int32_t>(modes.size()));
 
-  src->total_sensor_modes = modes.size();
+  self->total_sensor_modes = modes.size();
 
   PRODUCER_PRINT("Available Sensor modes :");
-  frameRate = src->info.fps_n / src->info.fps_d;
-  src->frame_duration = get_frame_duration(src->info);
+  frameRate = self->info.fps_n / self->info.fps_d;
+  self->frame_duration = get_frame_duration(self->info);
   ISensorMode* iSensorMode[modes.size()];
   Range<float> sensorModeAnalogGainRange;
   Range<float> ispDigitalGainRange;
@@ -229,7 +229,7 @@ static bool execute(int32_t cameraIndex,
     if (cameraMode == nvmanualcam::defaults::SENSOR_MODE_STATE) {
       if (streamSize.width() <= iSensorMode[index]->getResolution().width() &&
           streamSize.height() <= iSensorMode[index]->getResolution().height() &&
-          src->frame_duration >=
+          self->frame_duration >=
               (iSensorMode[index]->getFrameDurationRange().min())) {
         if (best_match == -1 ||
             ((streamSize.width() ==
@@ -262,30 +262,30 @@ static bool execute(int32_t cameraIndex,
     }
   }
   /* Update Sensor Mode*/
-  src->sensor_mode = cameraMode;
+  self->sensor_mode = cameraMode;
 
   if (frameRate >
       round((1e9 / (iSensorMode[cameraMode]->getFrameDurationRange().min())))) {
-    src->manual_in_error = TRUE;
-    GST_ERROR_OBJECT(src,
+    self->manual_in_error = TRUE;
+    GST_ERROR_OBJECT(self,
                      "Frame Rate specified (%d/%d) is greater than supported.",
-                     src->info.fps_n, src->info.fps_d);
+                     self->info.fps_n, self->info.fps_d);
   }
 
   IDenoiseSettings* denoiseSettings = interface_cast<IDenoiseSettings>(request);
   if (!denoiseSettings)
     ORIGINATE_ERROR("Failed to get DenoiseSettings interface");
-  src->iDenoiseSettings_ptr = denoiseSettings;
+  self->iDenoiseSettings_ptr = denoiseSettings;
 
   IEdgeEnhanceSettings* eeSettings =
       interface_cast<IEdgeEnhanceSettings>(request);
   if (!eeSettings)
     ORIGINATE_ERROR("Failed to get EdgeEnhancementSettings interface");
-  src->iEeSettings_ptr = eeSettings;
+  self->iEeSettings_ptr = eeSettings;
 
   /* Setting Noise Reduction Mode and Strength*/
-  if (src->tnrModePropSet) {
-    switch (src->controls.NoiseReductionMode) {
+  if (self->tnrModePropSet) {
+    switch (self->controls.NoiseReductionMode) {
       case NvManualCamNoiseReductionMode_Off:
         denoiseSettings->setDenoiseMode(DENOISE_MODE_OFF);
         break;
@@ -299,17 +299,17 @@ static bool execute(int32_t cameraIndex,
         denoiseSettings->setDenoiseMode(DENOISE_MODE_OFF);
         break;
     }
-    src->tnrModePropSet = FALSE;
+    self->tnrModePropSet = FALSE;
   }
 
-  if (src->tnrStrengthPropSet) {
-    denoiseSettings->setDenoiseStrength(src->controls.NoiseReductionStrength);
-    src->tnrStrengthPropSet = FALSE;
+  if (self->tnrStrengthPropSet) {
+    denoiseSettings->setDenoiseStrength(self->controls.NoiseReductionStrength);
+    self->tnrStrengthPropSet = FALSE;
   }
 
   /* Setting Edge Enhancement Mode and Strength*/
-  if (src->edgeEnhancementModePropSet) {
-    switch (src->controls.EdgeEnhancementMode) {
+  if (self->edgeEnhancementModePropSet) {
+    switch (self->controls.EdgeEnhancementMode) {
       case NvManualCamEdgeEnhancementMode_Off:
         eeSettings->setEdgeEnhanceMode(EDGE_ENHANCE_MODE_OFF);
         break;
@@ -323,17 +323,17 @@ static bool execute(int32_t cameraIndex,
         eeSettings->setEdgeEnhanceMode(EDGE_ENHANCE_MODE_OFF);
         break;
     }
-    src->edgeEnhancementModePropSet = FALSE;
+    self->edgeEnhancementModePropSet = FALSE;
   }
 
-  if (src->edgeEnhancementStrengthPropSet) {
-    eeSettings->setEdgeEnhanceStrength(src->controls.EdgeEnhancementStrength);
-    src->edgeEnhancementStrengthPropSet = FALSE;
+  if (self->edgeEnhancementStrengthPropSet) {
+    eeSettings->setEdgeEnhanceStrength(self->controls.EdgeEnhancementStrength);
+    self->edgeEnhancementStrengthPropSet = FALSE;
   }
 
   /* Setting AE Antibanding Mode */
-  if (src->aeAntibandingPropSet) {
-    switch (src->controls.AeAntibandingMode) {
+  if (self->aeAntibandingPropSet) {
+    switch (self->controls.AeAntibandingMode) {
       case NvManualCamAeAntibandingMode_Off:
         iAutoControlSettings->setAeAntibandingMode(AE_ANTIBANDING_MODE_OFF);
         break;
@@ -350,31 +350,31 @@ static bool execute(int32_t cameraIndex,
         iAutoControlSettings->setAeAntibandingMode(AE_ANTIBANDING_MODE_OFF);
         break;
     }
-    src->aeAntibandingPropSet = FALSE;
+    self->aeAntibandingPropSet = FALSE;
   }
 
-  if (src->exposureCompensationPropSet) {
+  if (self->exposureCompensationPropSet) {
     iAutoControlSettings->setExposureCompensation(
-        src->controls.ExposureCompensation);
-    src->exposureCompensationPropSet = FALSE;
+        self->controls.ExposureCompensation);
+    self->exposureCompensationPropSet = FALSE;
   }
 
   /* Setting auto white balance lock */
-  if (src->awbLockPropSet) {
-    if (src->controls.AwbLock)
+  if (self->awbLockPropSet) {
+    if (self->controls.AwbLock)
       iAutoControlSettings->setAwbLock(true);
     else
       iAutoControlSettings->setAwbLock(false);
-    src->awbLockPropSet = FALSE;
+    self->awbLockPropSet = FALSE;
   }
 
   /* Setting auto exposure lock */
-  if (src->aeLockPropSet) {
-    if (src->controls.AeLock)
+  if (self->aeLockPropSet) {
+    if (self->controls.AeLock)
       iAutoControlSettings->setAeLock(true);
     else
       iAutoControlSettings->setAeLock(false);
-    src->aeLockPropSet = FALSE;
+    self->aeLockPropSet = FALSE;
   }
 
   PRODUCER_PRINT(
@@ -389,8 +389,8 @@ static bool execute(int32_t cameraIndex,
       (1e9 / (iSensorMode[cameraMode]->getFrameDurationRange().min())));
 
   /* Setting white balance property */
-  if (src->wbPropSet) {
-    switch (src->controls.wbmode) {
+  if (self->wbPropSet) {
+    switch (self->controls.wbmode) {
       case NvManualCamAwbMode_Off:
         iAutoControlSettings->setAwbMode(AWB_MODE_OFF);
         break;
@@ -425,39 +425,39 @@ static bool execute(int32_t cameraIndex,
         iAutoControlSettings->setAwbMode(AWB_MODE_OFF);
         break;
     }
-    src->wbPropSet = FALSE;
+    self->wbPropSet = FALSE;
   }
 
   /* Setting color saturation property */
-  if (src->saturationPropSet) {
+  if (self->saturationPropSet) {
     iAutoControlSettings->setColorSaturationEnable(TRUE);
-    iAutoControlSettings->setColorSaturation(src->controls.saturation);
-    src->saturationPropSet = false;
+    iAutoControlSettings->setColorSaturation(self->controls.saturation);
+    self->saturationPropSet = false;
   }
 
-  if (src->exposureTimePropSet) {
-    limitExposureTimeRange.min() = src->controls.exposure_real;
-    limitExposureTimeRange.max() = src->controls.exposure_real;
+  if (self->exposureTimePropSet) {
+    limitExposureTimeRange.min() = self->controls.exposure_real;
+    limitExposureTimeRange.max() = self->controls.exposure_real;
     requestSourceSettings->setExposureTimeRange(limitExposureTimeRange);
-    src->exposureTimePropSet = false;
+    self->exposureTimePropSet = false;
   }
 
-  if (src->gainPropSet) {
-    sensorModeAnalogGainRange.min() = src->controls.gain;
-    sensorModeAnalogGainRange.max() = src->controls.gain;
+  if (self->gainPropSet) {
+    sensorModeAnalogGainRange.min() = self->controls.gain;
+    sensorModeAnalogGainRange.max() = self->controls.gain;
     requestSourceSettings->setGainRange(sensorModeAnalogGainRange);
-    src->gainPropSet = false;
+    self->gainPropSet = false;
   }
 
-  if (src->ispDigitalGainPropSet) {
-    ispDigitalGainRange.min() = src->controls.digital_gain;
-    ispDigitalGainRange.max() = src->controls.digital_gain;
+  if (self->ispDigitalGainPropSet) {
+    ispDigitalGainRange.min() = self->controls.digital_gain;
+    ispDigitalGainRange.max() = self->controls.digital_gain;
     iAutoControlSettings->setIspDigitalGainRange(ispDigitalGainRange);
-    src->ispDigitalGainPropSet = false;
+    self->ispDigitalGainPropSet = false;
   }
 
   requestSourceSettings->setSensorMode(modes[cameraMode]);
-  if (!src->info.fps_n) {
+  if (!self->info.fps_n) {
     frameRate = DEFAULT_FPS;
   }
 
@@ -468,23 +468,23 @@ static bool execute(int32_t cameraIndex,
 
   PRODUCER_PRINT("Starting repeat capture requests.");
   Request* captureRequest = request.get();
-  src->request_ptr = captureRequest;
+  self->request_ptr = captureRequest;
   iCaptureSession->capture(captureRequest);
   if (iCaptureSession->capture(captureRequest) == 0)
     ORIGINATE_ERROR("Failed to start capture request");
 
-  if (src->manual_in_error) {
+  if (self->manual_in_error) {
     PRODUCER_ERROR("InvalidState.");
     iCaptureSession->cancelRequests();
-    src->timeout = 1;
+    self->timeout = 1;
   } else if (secToRun != 0) {
     sleep(secToRun);
     iCaptureSession->cancelRequests();
   } else {
-    if (src->stop_requested == FALSE) {
-      g_mutex_lock(&src->eos_lock);
-      g_cond_wait(&src->eos_cond, &src->eos_lock);
-      g_mutex_unlock(&src->eos_lock);
+    if (self->stop_requested == FALSE) {
+      g_mutex_lock(&self->eos_lock);
+      g_cond_wait(&self->eos_cond, &self->eos_lock);
+      g_mutex_unlock(&self->eos_lock);
     }
   }
 
@@ -498,16 +498,16 @@ static bool execute(int32_t cameraIndex,
   outputStream.reset();
 
   // Manual execution completed, signal the buffer consumed cond.
-  if (!src->is_manual_buffer_consumed) {
-    g_mutex_lock(&src->manual_buffer_consumed_lock);
-    g_cond_signal(&src->manual_buffer_consumed_cond);
-    src->is_manual_buffer_consumed = TRUE;
-    g_mutex_unlock(&src->manual_buffer_consumed_lock);
+  if (!self->is_manual_buffer_consumed) {
+    g_mutex_lock(&self->manual_buffer_consumed_lock);
+    g_cond_signal(&self->manual_buffer_consumed_cond);
+    self->is_manual_buffer_consumed = TRUE;
+    g_mutex_unlock(&self->manual_buffer_consumed_lock);
   }
   // Wait for the consumer thread to complete.
   PROPAGATE_ERROR(consumerThread.shutdown());
 
-  if (src->manual_in_error)
+  if (self->manual_in_error)
     return false;
 
   PRODUCER_PRINT("Done Success");
@@ -599,9 +599,9 @@ G_DEFINE_TYPE(GstNVManualMemoryAllocator,
   (G_TYPE_CHECK_INSTANCE_CAST((obj), GST_TYPE_NV_MEMORY_ALLOCATOR, \
                               GstNVManualMemoryAllocator))
 
-static gpointer consumer_thread(gpointer src_base);
+static gpointer consumer_thread(gpointer base);
 
-static gpointer manual_thread(gpointer src_base);
+static gpointer manual_thread(gpointer base);
 
 static gpointer gst_nv_memory_map(GstMemory* mem,
                                   gsize maxsize,
@@ -746,7 +746,7 @@ static void gst_nv_manual_camera_src_finalize(GObject* object);
 
 /* GObject vmethod implementations */
 
-static GstCaps* gst_nv_manual_camera_fixate(GstBaseSrc* src, GstCaps* caps) {
+static GstCaps* gst_nv_manual_camera_fixate(GstBaseSrc* base, GstCaps* caps) {
   GstStructure* structure = NULL;
 
   caps = gst_caps_make_writable(caps);
@@ -758,149 +758,151 @@ static GstCaps* gst_nv_manual_camera_fixate(GstBaseSrc* src, GstCaps* caps) {
   gst_structure_fixate_field_nearest_fraction(structure, "framerate",
                                               DEFAULT_FPS, 1);
   caps = GST_BASE_SRC_CLASS(gst_nv_manual_camera_src_parent_class)
-             ->fixate(src, caps);
+             ->fixate(base, caps);
 
   return caps;
 }
 
 static gboolean gst_nv_manual_camera_set_caps(GstBaseSrc* base, GstCaps* caps) {
   GstCaps* old;
-  GstNvManualCameraSrc* src = GST_NVMANUALCAMERASRC(base);
+  GstNvManualCameraSrc* self = GST_NVMANUALCAMERASRC(base);
   // write own allocator here
 
-  GST_INFO_OBJECT(src, "Received caps %" GST_PTR_FORMAT, caps);
+  GST_INFO_OBJECT(self, "Received caps %" GST_PTR_FORMAT, caps);
 
-  if (!gst_video_info_from_caps(&src->info, caps)) {
-    GST_ERROR_OBJECT(src, "could not get GstVideoInfo from GstCaps");
+  if (!gst_video_info_from_caps(&self->info, caps)) {
+    GST_ERROR_OBJECT(self, "could not get GstVideoInfo from GstCaps");
     return FALSE;
   }
 
-  GST_INFO_OBJECT(src, "CAPS: res: %dx%d fps: %d/%d", src->info.width,
-                  src->info.height, src->info.fps_n, src->info.fps_d);
+  GST_INFO_OBJECT(self, "CAPS: res: %dx%d fps: %d/%d", self->info.width,
+                  self->info.height, self->info.fps_n, self->info.fps_d);
 
   // recalculate frame duration
-  src->frame_duration = get_frame_duration(src->info);
+  self->frame_duration = get_frame_duration(self->info);
 
-  if ((old = src->outcaps) != caps) {
+  if ((old = self->outcaps) != caps) {
     if (caps)
-      src->outcaps = gst_caps_copy(caps);
+      self->outcaps = gst_caps_copy(caps);
     else
-      src->outcaps = NULL;
+      self->outcaps = NULL;
     if (old)
       gst_caps_unref(old);
   }
 
-  if (src->bufApi == FALSE) {
-    src->pool = gst_buffer_pool_new();
+  if (self->bufApi == FALSE) {
+    self->pool = gst_buffer_pool_new();
     GstNVManualMemoryAllocator* allocator =
         (GstNVManualMemoryAllocator*)g_object_new(
             gst_nv_memory_allocator_get_type(), NULL);
-    allocator->owner = src;
-    GstStructure* config = gst_buffer_pool_get_config(src->pool);
+    allocator->owner = self;
+    GstStructure* config = gst_buffer_pool_get_config(self->pool);
     gst_buffer_pool_config_set_allocator(config, GST_ALLOCATOR(allocator),
                                          NULL);
 
     gst_buffer_pool_config_set_params(config, NULL, NvBufferGetSize(),
                                       MIN_BUFFERS, MAX_BUFFERS);
-    gst_buffer_pool_set_config(src->pool, config);
+    gst_buffer_pool_set_config(self->pool, config);
 
-    src->manual_buffers = g_queue_new();
-    src->nvmm_buffers = g_queue_new();
+    self->manual_buffers = g_queue_new();
+    self->nvmm_buffers = g_queue_new();
 
-    gst_buffer_pool_set_active(src->pool, TRUE);
+    gst_buffer_pool_set_active(self->pool, TRUE);
   } else {
-    src->pool = gst_nvds_buffer_pool_new();
-    GstStructure* config = gst_buffer_pool_get_config(src->pool);
+    self->pool = gst_nvds_buffer_pool_new();
+    GstStructure* config = gst_buffer_pool_get_config(self->pool);
     gst_buffer_pool_config_set_params(
-        config, src->outcaps, sizeof(NvBufSurface), MIN_BUFFERS, MAX_BUFFERS);
+        config, self->outcaps, sizeof(NvBufSurface), MIN_BUFFERS, MAX_BUFFERS);
     gst_structure_set(config, "memtype", G_TYPE_INT, NVBUF_MEM_DEFAULT,
                       "gpu-id", G_TYPE_UINT, 0, "batch-size", G_TYPE_UINT, 1,
                       NULL);
-    gst_buffer_pool_set_config(src->pool, config);
-    src->manual_buffers = g_queue_new();
-    src->nvmm_buffers = g_queue_new();
-    gst_buffer_pool_set_active(src->pool, TRUE);
+    gst_buffer_pool_set_config(self->pool, config);
+    self->manual_buffers = g_queue_new();
+    self->nvmm_buffers = g_queue_new();
+    gst_buffer_pool_set_active(self->pool, TRUE);
   }
 
-  src->consumer_thread = g_thread_new("consumer_thread", consumer_thread, src);
+  self->consumer_thread =
+      g_thread_new("consumer_thread", consumer_thread, self);
 
-  src->manual_thread = g_thread_new("manual_thread", manual_thread, src);
+  self->manual_thread = g_thread_new("manual_thread", manual_thread, self);
 
-  if (src->manual_in_error) {
+  if (self->manual_in_error) {
     return FALSE;
   }
 
   return TRUE;
 }
 
-static gboolean gst_nv_manual_camera_start(GstBaseSrc* src_base) {
-  GstNvManualCameraSrc* self = (GstNvManualCameraSrc*)src_base;
+static gboolean gst_nv_manual_camera_start(GstBaseSrc* base) {
+  GstNvManualCameraSrc* self = (GstNvManualCameraSrc*)base;
   self->stop_requested = FALSE;
 
   return TRUE;
 }
 
-static gboolean gst_nv_manual_camera_unlock(GstBaseSrc* src) {
-  GstNvManualCameraSrc* self = (GstNvManualCameraSrc*)src;
+static gboolean gst_nv_manual_camera_unlock(GstBaseSrc* base) {
+  GstNvManualCameraSrc* self = (GstNvManualCameraSrc*)base;
 
   self->unlock_requested = TRUE;
 
   return TRUE;
 }
 
-static gboolean gst_nv_manual_camera_unlock_stop(GstBaseSrc* src) {
-  GstNvManualCameraSrc* self = (GstNvManualCameraSrc*)src;
+static gboolean gst_nv_manual_camera_unlock_stop(GstBaseSrc* base) {
+  GstNvManualCameraSrc* self = (GstNvManualCameraSrc*)base;
 
   self->unlock_requested = FALSE;
 
   return TRUE;
 }
 
-static gboolean gst_nv_manual_camera_stop(GstBaseSrc* src_base) {
-  GstNvManualCameraSrc* src = (GstNvManualCameraSrc*)src_base;
-  src->stop_requested = TRUE;
-  if (!src->timeout) {
+static gboolean gst_nv_manual_camera_stop(GstBaseSrc* base) {
+  GstNvManualCameraSrc* self = (GstNvManualCameraSrc*)base;
+  self->stop_requested = TRUE;
+  if (!self->timeout) {
     ICaptureSession* l_iCaptureSession =
-        (ICaptureSession*)src->iCaptureSession_ptr;
+        (ICaptureSession*)self->iCaptureSession_ptr;
     if (l_iCaptureSession) {
       l_iCaptureSession->cancelRequests();
       l_iCaptureSession->stopRepeat();
       l_iCaptureSession->waitForIdle();
     }
   }
-  g_mutex_lock(&src->eos_lock);
-  g_cond_signal(&src->eos_cond);
-  g_mutex_unlock(&src->eos_lock);
-  gst_buffer_pool_set_active(src->pool, false);
-  g_thread_join(src->manual_thread);
+  g_mutex_lock(&self->eos_lock);
+  g_cond_signal(&self->eos_cond);
+  g_mutex_unlock(&self->eos_lock);
+  gst_buffer_pool_set_active(self->pool, false);
+  g_thread_join(self->manual_thread);
   return TRUE;
 }
 
-static gpointer manual_thread(gpointer src_base) {
-  GstNvManualCameraSrc* src = (GstNvManualCameraSrc*)src_base;
+static gpointer manual_thread(gpointer base) {
+  GstNvManualCameraSrc* self = (GstNvManualCameraSrc*)base;
 
-  int32_t cameraIndex = src->sensor_id;
-  int32_t cameraMode = src->sensor_mode;
-  int32_t secToRun = src->timeout;
-  Size2D<uint32_t> streamSize(src->info.width, src->info.height);
+  int32_t cameraIndex = self->sensor_id;
+  int32_t cameraMode = self->sensor_mode;
+  int32_t secToRun = self->timeout;
+  Size2D<uint32_t> streamSize(self->info.width, self->info.height);
 
-  nvmanualcam::execute(cameraIndex, cameraMode, streamSize, secToRun, src);
+  nvmanualcam::execute(cameraIndex, cameraMode, streamSize, secToRun, self);
 
-  src->stop_requested = TRUE;
+  self->stop_requested = TRUE;
 
-  g_mutex_lock(&src->manual_buffers_queue_lock);
-  g_cond_signal(&src->manual_buffers_queue_cond);
-  g_mutex_unlock(&src->manual_buffers_queue_lock);
+  g_mutex_lock(&self->manual_buffers_queue_lock);
+  g_cond_signal(&self->manual_buffers_queue_cond);
+  g_mutex_unlock(&self->manual_buffers_queue_lock);
 
-  g_mutex_lock(&src->nvmm_buffers_queue_lock);
-  g_cond_signal(&src->nvmm_buffers_queue_cond);
-  g_mutex_unlock(&src->nvmm_buffers_queue_lock);
+  g_mutex_lock(&self->nvmm_buffers_queue_lock);
+  g_cond_signal(&self->nvmm_buffers_queue_cond);
+  g_mutex_unlock(&self->nvmm_buffers_queue_lock);
 
-  GST_DEBUG_OBJECT(src, "%s: stop_requested=%d", __func__, src->stop_requested);
-  return src_base;
+  GST_DEBUG_OBJECT(self, "%s: stop_requested=%d", __func__,
+                   self->stop_requested);
+  return base;
 }
 
-static gpointer consumer_thread(gpointer src_base) {
+static gpointer consumer_thread(gpointer base) {
   gint retn = 0;
   GstBuffer* buffer;
   GstMemory* mem;
@@ -910,37 +912,37 @@ static gpointer consumer_thread(gpointer src_base) {
   static GQuark gst_buffer_metadata_quark = 0;
   gst_buffer_metadata_quark = g_quark_from_static_string("GstBufferMetaData");
 
-  GstNvManualCameraSrc* src = (GstNvManualCameraSrc*)src_base;
+  GstNvManualCameraSrc* self = (GstNvManualCameraSrc*)base;
 
-  while (FALSE == src->stop_requested) {
-    g_mutex_lock(&src->manual_buffers_queue_lock);
-    if (src->stop_requested) {
-      g_mutex_unlock(&src->manual_buffers_queue_lock);
+  while (FALSE == self->stop_requested) {
+    g_mutex_lock(&self->manual_buffers_queue_lock);
+    if (self->stop_requested) {
+      g_mutex_unlock(&self->manual_buffers_queue_lock);
       goto done;
     }
-    while (g_queue_is_empty(src->manual_buffers)) {
-      g_cond_wait(&src->manual_buffers_queue_cond,
-                  &src->manual_buffers_queue_lock);
+    while (g_queue_is_empty(self->manual_buffers)) {
+      g_cond_wait(&self->manual_buffers_queue_cond,
+                  &self->manual_buffers_queue_lock);
     }
 
     consumerFrameInfo =
-        (NvManualFrameInfo*)g_queue_pop_head(src->manual_buffers);
-    g_mutex_unlock(&src->manual_buffers_queue_lock);
+        (NvManualFrameInfo*)g_queue_pop_head(self->manual_buffers);
+    g_mutex_unlock(&self->manual_buffers_queue_lock);
     if (&consumerFrameInfo->fd == NULL) {
       goto done;
     }
-    ret = gst_buffer_pool_acquire_buffer(src->pool, &buffer, NULL);
+    ret = gst_buffer_pool_acquire_buffer(self->pool, &buffer, NULL);
     if (ret != GST_FLOW_OK) {
-      if (!src->stop_requested) {
-        GST_ERROR_OBJECT(src, "Error in pool acquire buffer");
+      if (!self->stop_requested) {
+        GST_ERROR_OBJECT(self, "Error in pool acquire buffer");
       }
       goto done;
     }
 
-    if (src->bufApi == FALSE) {
+    if (self->bufApi == FALSE) {
       mem = gst_buffer_peek_memory(buffer, 0);
       if (!mem) {
-        GST_ERROR_OBJECT(src, "no memory block");
+        GST_ERROR_OBJECT(self, "no memory block");
         goto done;
       }
       nv_mem = (GstNVManualMemory*)mem;
@@ -952,13 +954,13 @@ static gpointer consumer_thread(gpointer src_base) {
 
       retn =
           NvBufferTransform(consumerFrameInfo->fd, nv_mem->nvcam_buf->dmabuf_fd,
-                            &src->transform_params);
-      g_mutex_lock(&src->manual_buffer_consumed_lock);
-      g_cond_signal(&src->manual_buffer_consumed_cond);
-      src->is_manual_buffer_consumed = TRUE;
-      g_mutex_unlock(&src->manual_buffer_consumed_lock);
+                            &self->transform_params);
+      g_mutex_lock(&self->manual_buffer_consumed_lock);
+      g_cond_signal(&self->manual_buffer_consumed_cond);
+      self->is_manual_buffer_consumed = TRUE;
+      g_mutex_unlock(&self->manual_buffer_consumed_lock);
       if (retn != 0) {
-        GST_ERROR_OBJECT(src, "NvBufferTransform Failed");
+        GST_ERROR_OBJECT(self, "NvBufferTransform Failed");
         /* TODO: Check if need to set ->stop_requested flag in error condition
          */
         goto done;
@@ -967,7 +969,7 @@ static gpointer consumer_thread(gpointer src_base) {
       mem = gst_buffer_peek_memory(buffer, 0);
       GstMapInfo outmap = GST_MAP_INFO_INIT;
       if (!mem) {
-        GST_ERROR_OBJECT(src, "no memory block");
+        GST_ERROR_OBJECT(self, "no memory block");
         goto done;
       }
       gst_buffer_map(buffer, &outmap, GST_MAP_WRITE);
@@ -975,14 +977,14 @@ static gpointer consumer_thread(gpointer src_base) {
 
       retn = NvBufferTransform(consumerFrameInfo->fd,
                                (gint)surf->surfaceList[0].bufferDesc,
-                               &src->transform_params);
-      g_mutex_lock(&src->manual_buffer_consumed_lock);
-      g_cond_signal(&src->manual_buffer_consumed_cond);
-      src->is_manual_buffer_consumed = TRUE;
-      g_mutex_unlock(&src->manual_buffer_consumed_lock);
+                               &self->transform_params);
+      g_mutex_lock(&self->manual_buffer_consumed_lock);
+      g_cond_signal(&self->manual_buffer_consumed_cond);
+      self->is_manual_buffer_consumed = TRUE;
+      g_mutex_unlock(&self->manual_buffer_consumed_lock);
       surf->numFilled = 1;
       if (retn != 0) {
-        GST_ERROR_OBJECT(src, "NvBufferTransform Failed");
+        GST_ERROR_OBJECT(self, "NvBufferTransform Failed");
         /* TODO: Check if need to set ->stop_requested flag in error condition
          */
         goto done;
@@ -991,14 +993,15 @@ static gpointer consumer_thread(gpointer src_base) {
       gst_buffer_unmap(buffer, &outmap);
     }
 
-    g_queue_push_tail(src->nvmm_buffers, buffer);
+    g_queue_push_tail(self->nvmm_buffers, buffer);
 
-    g_mutex_lock(&src->nvmm_buffers_queue_lock);
-    g_cond_signal(&src->nvmm_buffers_queue_cond);
-    g_mutex_unlock(&src->nvmm_buffers_queue_lock);
+    g_mutex_lock(&self->nvmm_buffers_queue_lock);
+    g_cond_signal(&self->nvmm_buffers_queue_cond);
+    g_mutex_unlock(&self->nvmm_buffers_queue_lock);
   }
 done:
-  GST_DEBUG_OBJECT(src, "%s: stop_requested=%d", __func__, src->stop_requested);
+  GST_DEBUG_OBJECT(self, "%s: stop_requested=%d", __func__,
+                   self->stop_requested);
   if (buffer) {
     gst_mini_object_set_qdata(GST_MINI_OBJECT_CAST(buffer),
                               gst_buffer_metadata_quark, NULL, NULL);
@@ -1006,11 +1009,11 @@ done:
   return NULL;
 }
 
-static GstFlowReturn gst_nv_manual_camera_create(GstBaseSrc* src_base,
+static GstFlowReturn gst_nv_manual_camera_create(GstBaseSrc* base,
                                                  guint64 offset,
                                                  guint size,
                                                  GstBuffer** buf) {
-  GstNvManualCameraSrc* self = GST_NVMANUALCAMERASRC(src_base);
+  GstNvManualCameraSrc* self = GST_NVMANUALCAMERASRC(base);
   GstFlowReturn ret = GST_FLOW_OK;
   GstBuffer* gst_buf = NULL;
 
@@ -1235,145 +1238,145 @@ static void gst_nv_manual_camera_src_class_init(
  * set pad calback functions
  * initialize instance structure
  */
-static void gst_nv_manual_camera_src_init(GstNvManualCameraSrc* src) {
-  gst_video_info_init(&src->info);
-  src->info.width = DEFAULT_WIDTH;
-  src->info.height = DEFAULT_HEIGHT;
-  src->info.fps_n = DEFAULT_FPS;
-  src->info.fps_d = 1;
-  src->frame_duration = get_frame_duration(src->info);
-  src->stop_requested = FALSE;
-  src->unlock_requested = FALSE;
-  src->silent = TRUE;
-  src->outcaps = NULL;
-  src->timeout = 0;
-  src->manual_in_error = FALSE;
-  src->sensor_id = nvmanualcam::defaults::SENSOR_ID;
-  src->sensor_mode = nvmanualcam::defaults::SENSOR_MODE_STATE;
-  src->total_sensor_modes = nvmanualcam::defaults::TOTAL_SENSOR_MODES;
-  src->controls.NoiseReductionStrength = nvmanualcam::defaults::TNR_STRENGTH;
-  src->controls.NoiseReductionMode = nvmanualcam::defaults::TNR_MODE;
-  src->controls.wbmode = nvmanualcam::defaults::WB_MODE;
-  src->controls.meta_enabled = nvmanualcam::defaults::METADATA;
-  src->controls.saturation = nvmanualcam::defaults::SATURATION;
-  src->controls.EdgeEnhancementStrength = nvmanualcam::defaults::EE_STRENGTH;
-  src->controls.EdgeEnhancementMode = nvmanualcam::defaults::EE_MODE;
-  src->controls.AeAntibandingMode = nvmanualcam::defaults::AEANTIBANDING_MODE;
-  src->controls.AeLock = nvmanualcam::defaults::AE_LOCK;
-  src->controls.AwbLock = nvmanualcam::defaults::AWB_LOCK;
+static void gst_nv_manual_camera_src_init(GstNvManualCameraSrc* self) {
+  gst_video_info_init(&self->info);
+  self->info.width = DEFAULT_WIDTH;
+  self->info.height = DEFAULT_HEIGHT;
+  self->info.fps_n = DEFAULT_FPS;
+  self->info.fps_d = 1;
+  self->frame_duration = get_frame_duration(self->info);
+  self->stop_requested = FALSE;
+  self->unlock_requested = FALSE;
+  self->silent = TRUE;
+  self->outcaps = NULL;
+  self->timeout = 0;
+  self->manual_in_error = FALSE;
+  self->sensor_id = nvmanualcam::defaults::SENSOR_ID;
+  self->sensor_mode = nvmanualcam::defaults::SENSOR_MODE_STATE;
+  self->total_sensor_modes = nvmanualcam::defaults::TOTAL_SENSOR_MODES;
+  self->controls.NoiseReductionStrength = nvmanualcam::defaults::TNR_STRENGTH;
+  self->controls.NoiseReductionMode = nvmanualcam::defaults::TNR_MODE;
+  self->controls.wbmode = nvmanualcam::defaults::WB_MODE;
+  self->controls.meta_enabled = nvmanualcam::defaults::METADATA;
+  self->controls.saturation = nvmanualcam::defaults::SATURATION;
+  self->controls.EdgeEnhancementStrength = nvmanualcam::defaults::EE_STRENGTH;
+  self->controls.EdgeEnhancementMode = nvmanualcam::defaults::EE_MODE;
+  self->controls.AeAntibandingMode = nvmanualcam::defaults::AEANTIBANDING_MODE;
+  self->controls.AeLock = nvmanualcam::defaults::AE_LOCK;
+  self->controls.AwbLock = nvmanualcam::defaults::AWB_LOCK;
 
-  g_mutex_init(&src->manual_buffers_queue_lock);
-  g_cond_init(&src->manual_buffers_queue_cond);
+  g_mutex_init(&self->manual_buffers_queue_lock);
+  g_cond_init(&self->manual_buffers_queue_cond);
 
-  g_mutex_init(&src->manual_buffer_consumed_lock);
-  g_cond_init(&src->manual_buffer_consumed_cond);
+  g_mutex_init(&self->manual_buffer_consumed_lock);
+  g_cond_init(&self->manual_buffer_consumed_cond);
 
-  g_mutex_init(&src->nvmm_buffers_queue_lock);
-  g_cond_init(&src->nvmm_buffers_queue_cond);
+  g_mutex_init(&self->nvmm_buffers_queue_lock);
+  g_cond_init(&self->nvmm_buffers_queue_cond);
 
-  memset(&src->transform_params, 0, sizeof(NvBufferTransformParams));
+  memset(&self->transform_params, 0, sizeof(NvBufferTransformParams));
 
-  g_mutex_init(&src->eos_lock);
-  g_cond_init(&src->eos_cond);
+  g_mutex_init(&self->eos_lock);
+  g_cond_init(&self->eos_cond);
 
-  gst_base_src_set_live(GST_BASE_SRC(src), TRUE);
-  gst_base_src_set_format(GST_BASE_SRC(src), GST_FORMAT_TIME);
-  gst_base_src_set_do_timestamp(GST_BASE_SRC(src), TRUE);
+  gst_base_src_set_live(GST_BASE_SRC(self), TRUE);
+  gst_base_src_set_format(GST_BASE_SRC(self), GST_FORMAT_TIME);
+  gst_base_src_set_do_timestamp(GST_BASE_SRC(self), TRUE);
 }
 
 static void gst_nv_manual_camera_src_finalize(GObject* object) {
-  GstNvManualCameraSrc* src = GST_NVMANUALCAMERASRC(object);
-  GST_DEBUG_OBJECT(src, "cleaning up");
-  g_mutex_clear(&src->nvmm_buffers_queue_lock);
-  g_cond_clear(&src->nvmm_buffers_queue_cond);
-  g_mutex_clear(&src->manual_buffers_queue_lock);
-  g_cond_clear(&src->manual_buffers_queue_cond);
-  g_mutex_clear(&src->manual_buffer_consumed_lock);
-  g_cond_clear(&src->manual_buffer_consumed_cond);
-  g_mutex_clear(&src->eos_lock);
-  g_cond_clear(&src->eos_cond);
+  GstNvManualCameraSrc* self = GST_NVMANUALCAMERASRC(object);
+  GST_DEBUG_OBJECT(self, "cleaning up");
+  g_mutex_clear(&self->nvmm_buffers_queue_lock);
+  g_cond_clear(&self->nvmm_buffers_queue_cond);
+  g_mutex_clear(&self->manual_buffers_queue_lock);
+  g_cond_clear(&self->manual_buffers_queue_cond);
+  g_mutex_clear(&self->manual_buffer_consumed_lock);
+  g_cond_clear(&self->manual_buffer_consumed_cond);
+  g_mutex_clear(&self->eos_lock);
+  g_cond_clear(&self->eos_cond);
 }
 
 static void gst_nv_manual_camera_src_set_property(GObject* object,
                                                   guint prop_id,
                                                   const GValue* value,
                                                   GParamSpec* pspec) {
-  GstNvManualCameraSrc* src = GST_NVMANUALCAMERASRC(object);
+  GstNvManualCameraSrc* self = GST_NVMANUALCAMERASRC(object);
 
   switch (prop_id) {
     case PROP_SILENT:
-      src->silent = g_value_get_boolean(value);
+      self->silent = g_value_get_boolean(value);
       break;
     case PROP_TIMEOUT:
-      src->timeout = g_value_get_uint(value);
+      self->timeout = g_value_get_uint(value);
       break;
     case PROP_WHITE_BALANCE:
-      src->controls.wbmode = (NvManualCamAwbMode)g_value_get_enum(value);
-      src->wbPropSet = TRUE;
+      self->controls.wbmode = (NvManualCamAwbMode)g_value_get_enum(value);
+      self->wbPropSet = TRUE;
       break;
     case PROP_SATURATION:
-      src->controls.saturation = g_value_get_float(value);
-      src->saturationPropSet = TRUE;
+      self->controls.saturation = g_value_get_float(value);
+      self->saturationPropSet = TRUE;
       break;
     case PROP_SENSOR_ID:
-      src->sensor_id = g_value_get_int(value);
+      self->sensor_id = g_value_get_int(value);
       break;
     case PROP_SENSOR_MODE:
-      src->sensor_mode = g_value_get_int(value);
+      self->sensor_mode = g_value_get_int(value);
       break;
     case PROP_EXPOSURE_TIME:
-      src->controls.exposure_time = g_value_get_float(value);
-      src->controls.exposure_real =
-          src->controls.exposure_time * src->frame_duration;
-      src->exposureTimePropSet = true;
+      self->controls.exposure_time = g_value_get_float(value);
+      self->controls.exposure_real =
+          self->controls.exposure_time * self->frame_duration;
+      self->exposureTimePropSet = true;
       break;
     case PROP_GAIN:
-      src->controls.gain = g_value_get_float(value);
-      src->gainPropSet = true;
+      self->controls.gain = g_value_get_float(value);
+      self->gainPropSet = true;
       break;
     case PROP_DIGITAL_GAIN:
-      src->controls.digital_gain = g_value_get_float(value);
-      src->ispDigitalGainPropSet = true;
+      self->controls.digital_gain = g_value_get_float(value);
+      self->ispDigitalGainPropSet = true;
       break;
     case PROP_TNR_STRENGTH:
-      src->controls.NoiseReductionStrength = g_value_get_float(value);
-      src->tnrStrengthPropSet = TRUE;
+      self->controls.NoiseReductionStrength = g_value_get_float(value);
+      self->tnrStrengthPropSet = TRUE;
       break;
     case PROP_TNR_MODE:
-      src->controls.NoiseReductionMode =
+      self->controls.NoiseReductionMode =
           (NvManualCamNoiseReductionMode)g_value_get_enum(value);
-      src->tnrModePropSet = TRUE;
+      self->tnrModePropSet = TRUE;
       break;
     case PROP_EDGE_ENHANCEMENT_STRENGTH:
-      src->controls.EdgeEnhancementStrength = g_value_get_float(value);
-      src->edgeEnhancementStrengthPropSet = TRUE;
+      self->controls.EdgeEnhancementStrength = g_value_get_float(value);
+      self->edgeEnhancementStrengthPropSet = TRUE;
       break;
     case PROP_EDGE_ENHANCEMENT_MODE:
-      src->controls.EdgeEnhancementMode =
+      self->controls.EdgeEnhancementMode =
           (NvManualCamEdgeEnhancementMode)g_value_get_enum(value);
-      src->edgeEnhancementModePropSet = TRUE;
+      self->edgeEnhancementModePropSet = TRUE;
       break;
     case PROP_AEANTIBANDING_MODE:
-      src->controls.AeAntibandingMode =
+      self->controls.AeAntibandingMode =
           (NvManualCamAeAntibandingMode)g_value_get_enum(value);
-      src->aeAntibandingPropSet = TRUE;
+      self->aeAntibandingPropSet = TRUE;
       break;
     case PROP_EXPOSURE_COMPENSATION:
-      src->controls.ExposureCompensation = g_value_get_float(value);
-      src->exposureCompensationPropSet = TRUE;
+      self->controls.ExposureCompensation = g_value_get_float(value);
+      self->exposureCompensationPropSet = TRUE;
       break;
     case PROP_AE_LOCK:
-      src->controls.AeLock = g_value_get_boolean(value);
-      src->aeLockPropSet = TRUE;
+      self->controls.AeLock = g_value_get_boolean(value);
+      self->aeLockPropSet = TRUE;
       break;
     case PROP_AWB_LOCK:
-      src->controls.AwbLock = g_value_get_boolean(value);
-      src->awbLockPropSet = TRUE;
+      self->controls.AwbLock = g_value_get_boolean(value);
+      self->awbLockPropSet = TRUE;
       break;
     case PROP_METADATA:
-      src->controls.meta_enabled = g_value_get_boolean(value);
+      self->controls.meta_enabled = g_value_get_boolean(value);
     case PROP_BUFAPI:
-      src->bufApi = g_value_get_boolean(value);
+      self->bufApi = g_value_get_boolean(value);
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID(object, prop_id, pspec);
@@ -1385,71 +1388,71 @@ static void gst_nv_manual_camera_src_get_property(GObject* object,
                                                   guint prop_id,
                                                   GValue* value,
                                                   GParamSpec* pspec) {
-  GstNvManualCameraSrc* src = GST_NVMANUALCAMERASRC(object);
+  GstNvManualCameraSrc* self = GST_NVMANUALCAMERASRC(object);
 
   switch (prop_id) {
     case PROP_SILENT:
-      g_value_set_boolean(value, src->silent);
+      g_value_set_boolean(value, self->silent);
       break;
     case PROP_TIMEOUT:
-      g_value_set_uint(value, src->timeout);
+      g_value_set_uint(value, self->timeout);
       break;
     case PROP_WHITE_BALANCE:
-      g_value_set_enum(value, src->controls.wbmode);
+      g_value_set_enum(value, self->controls.wbmode);
       break;
     case PROP_SATURATION:
-      g_value_set_float(value, src->controls.saturation);
+      g_value_set_float(value, self->controls.saturation);
       break;
     case PROP_SENSOR_ID:
-      g_value_set_int(value, src->sensor_id);
+      g_value_set_int(value, self->sensor_id);
       break;
     case PROP_SENSOR_MODE:
-      g_value_set_int(value, src->sensor_mode);
+      g_value_set_int(value, self->sensor_mode);
       break;
     case PROP_TOTAL_SENSOR_MODES:
-      g_value_set_int(value, src->total_sensor_modes);
+      g_value_set_int(value, self->total_sensor_modes);
       break;
     case PROP_EXPOSURE_TIME:
-      g_value_set_float(value, src->controls.exposure_time);
+      g_value_set_float(value, self->controls.exposure_time);
       break;
     case PROP_EXPOSURE_REAL:
-      g_value_set_uint64(value, src->controls.exposure_real);
+      g_value_set_uint64(value, self->controls.exposure_real);
       break;
     case PROP_GAIN:
-      g_value_set_float(value, src->controls.gain);
+      g_value_set_float(value, self->controls.gain);
       break;
     case PROP_DIGITAL_GAIN:
-      g_value_set_float(value, src->controls.digital_gain);
+      g_value_set_float(value, self->controls.digital_gain);
       break;
     case PROP_TNR_STRENGTH:
-      g_value_set_float(value, src->controls.NoiseReductionStrength);
+      g_value_set_float(value, self->controls.NoiseReductionStrength);
       break;
     case PROP_TNR_MODE:
-      g_value_set_enum(value, src->controls.NoiseReductionMode);
+      g_value_set_enum(value, self->controls.NoiseReductionMode);
       break;
     case PROP_EDGE_ENHANCEMENT_MODE:
-      g_value_set_enum(value, src->controls.EdgeEnhancementMode);
+      g_value_set_enum(value, self->controls.EdgeEnhancementMode);
       break;
     case PROP_EDGE_ENHANCEMENT_STRENGTH:
-      g_value_set_float(value, src->controls.EdgeEnhancementStrength);
+      g_value_set_float(value, self->controls.EdgeEnhancementStrength);
       break;
     case PROP_AEANTIBANDING_MODE:
-      g_value_set_enum(value, src->controls.AeAntibandingMode);
+      g_value_set_enum(value, self->controls.AeAntibandingMode);
       break;
     case PROP_EXPOSURE_COMPENSATION:
-      g_value_set_float(value, src->controls.ExposureCompensation);
+      g_value_set_float(value, self->controls.ExposureCompensation);
       break;
     case PROP_AE_LOCK:
-      g_value_set_boolean(value, src->controls.AeLock);
+      g_value_set_boolean(value, self->controls.AeLock);
       break;
     case PROP_AWB_LOCK:
-      g_value_set_boolean(value, src->controls.AwbLock);
+      g_value_set_boolean(value, self->controls.AwbLock);
       break;
     case PROP_METADATA:
-      g_value_set_boolean(value, src->controls.meta_enabled);
+      g_value_set_boolean(value, self->controls.meta_enabled);
       break;
     case PROP_BUFAPI:
-      g_value_set_boolean(value, src->bufApi);
+      g_value_set_boolean(value, self->bufApi);
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID(object, prop_id, pspec);

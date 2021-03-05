@@ -41,7 +41,8 @@ using namespace EGLStream;
 
 namespace nvmanualcam::utils {
 
-bool Consumer::threadInitialize(GstNvManualCameraSrc* src) {
+bool Consumer::threadInitialize(GstNvManualCameraSrc* _) {
+  (void)_;
   // Create the FrameConsumer.
   m_consumer = UniqueObj<FrameConsumer>(FrameConsumer::create(m_stream));
   if (!m_consumer)
