@@ -85,17 +85,9 @@ GST_DEBUG_CATEGORY_STATIC(gst_nvmanualcamerasrc_debug);
 
 // begin helpers
 
-/* signals and args */
-enum {
-  /* FILL ME */
-  LAST_SIGNAL
-};
-
 G_BEGIN_DECLS
 
-using namespace std;
 using namespace Argus;
-using namespace EGLStream;
 
 enum {
   PROP_0,
