@@ -46,7 +46,7 @@ namespace nvmanualcam {
  */
 guint64 get_frame_duration(const GstVideoInfo& info);
 
-}  // namespace nvcvcam
+}  // namespace nvmanualcam
 
 typedef enum {
   NvManualCamAwbMode_Off = 0,
