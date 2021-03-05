@@ -158,6 +158,9 @@ static bool execute(int32_t cameraIndex,
   if (iStreamSettings) {
     iStreamSettings->setPixelFormat(PIXEL_FMT_YCbCr_420_888);
     iStreamSettings->setResolution(streamSize);
+    if (src->controls.meta_enabled) {
+      iStreamSettings->setMetadataEnable(true);
+    }
   }
   UniqueObj<OutputStream> outputStream(
       iCaptureSession->createOutputStream(streamSettings.get()));
@@ -522,26 +525,27 @@ enum {
 
 enum {
   PROP_0,
-  PROP_SILENT,
-  PROP_TIMEOUT,
-  PROP_WHITE_BALANCE,
+  PROP_AE_LOCK,
+  PROP_AEANTIBANDING_MODE,
+  PROP_AWB_LOCK,
+  PROP_BUFAPI,
+  PROP_DIGITAL_GAIN,
+  PROP_EDGE_ENHANCEMENT_MODE,
+  PROP_EDGE_ENHANCEMENT_STRENGTH,
+  PROP_EXPOSURE_COMPENSATION,
+  PROP_EXPOSURE_REAL,
+  PROP_EXPOSURE_TIME,
+  PROP_GAIN,
+  PROP_METADATA,
   PROP_SATURATION,
   PROP_SENSOR_ID,
   PROP_SENSOR_MODE,
-  PROP_TOTAL_SENSOR_MODES,
-  PROP_EXPOSURE_TIME,
-  PROP_EXPOSURE_REAL,
-  PROP_GAIN,
-  PROP_DIGITAL_GAIN,
-  PROP_TNR_STRENGTH,
+  PROP_SILENT,
+  PROP_TIMEOUT,
   PROP_TNR_MODE,
-  PROP_EDGE_ENHANCEMENT_MODE,
-  PROP_EDGE_ENHANCEMENT_STRENGTH,
-  PROP_AEANTIBANDING_MODE,
-  PROP_EXPOSURE_COMPENSATION,
-  PROP_AE_LOCK,
-  PROP_AWB_LOCK,
-  PROP_BUFAPI
+  PROP_TNR_STRENGTH,
+  PROP_TOTAL_SENSOR_MODES,
+  PROP_WHITE_BALANCE,
 };
 
 typedef struct AuxiliaryData {
@@ -1204,6 +1208,14 @@ static void gst_nv_manual_camera_src_class_init(
           nvmanualcam::defaults::AWB_LOCK, (GParamFlags)G_PARAM_READWRITE));
 
   g_object_class_install_property(
+      gobject_class, PROP_METADATA,
+      g_param_spec_boolean(
+          "metadata", "Generate metadata",
+          "Generate and attach Argus::CaptureMetadata.",
+          nvmanualcam::defaults::METADATA,
+          (GParamFlags)(G_PARAM_READWRITE | GST_PARAM_MUTABLE_READY)));
+
+  g_object_class_install_property(
       gobject_class, PROP_BUFAPI,
       g_param_spec_boolean(
           "bufapi-version", "Buffer API", "set to use new Buffer API",
@@ -1242,6 +1254,7 @@ static void gst_nv_manual_camera_src_init(GstNvManualCameraSrc* src) {
   src->controls.NoiseReductionStrength = nvmanualcam::defaults::TNR_STRENGTH;
   src->controls.NoiseReductionMode = nvmanualcam::defaults::TNR_MODE;
   src->controls.wbmode = nvmanualcam::defaults::WB_MODE;
+  src->controls.meta_enabled = nvmanualcam::defaults::METADATA;
   src->controls.saturation = nvmanualcam::defaults::SATURATION;
   src->controls.EdgeEnhancementStrength = nvmanualcam::defaults::EE_STRENGTH;
   src->controls.EdgeEnhancementMode = nvmanualcam::defaults::EE_MODE;
@@ -1357,6 +1370,8 @@ static void gst_nv_manual_camera_src_set_property(GObject* object,
       src->controls.AwbLock = g_value_get_boolean(value);
       src->awbLockPropSet = TRUE;
       break;
+    case PROP_METADATA:
+      src->controls.meta_enabled = g_value_get_boolean(value);
     case PROP_BUFAPI:
       src->bufApi = g_value_get_boolean(value);
       break;
@@ -1429,6 +1444,9 @@ static void gst_nv_manual_camera_src_get_property(GObject* object,
       break;
     case PROP_AWB_LOCK:
       g_value_set_boolean(value, src->controls.AwbLock);
+      break;
+    case PROP_METADATA:
+      g_value_set_boolean(value, src->controls.meta_enabled);
       break;
     case PROP_BUFAPI:
       g_value_set_boolean(value, src->bufApi);

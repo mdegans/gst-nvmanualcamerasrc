@@ -292,6 +292,23 @@ bool Consumer::threadExecute(GstNvManualCameraSrc* src) {
     src->frameInfo->frameNum = iFrame->getNumber();
     src->frameInfo->frameTime = iFrame->getTime();
 
+    // Attach capture metadata to frameInfo
+    // TODO(mdegans): research gstreamer frame level metadata to see if there is
+    //  a better way to do this.
+    if (src->controls.meta_enabled) {
+      auto iArgusCaptureMetadata =
+          Argus::interface_cast<IArgusCaptureMetadata>(frame);
+      if (!iArgusCaptureMetadata) {
+        ORIGINATE_ERROR("IArgusCaptureMetadata not supported by Frame.");
+      }
+      // lifetime tied to frame
+      auto meta = iArgusCaptureMetadata->getMetadata();
+      if (!meta) {
+        ORIGINATE_ERROR("Could not get Argus::CaptureMetadata");
+      }
+      src->frameInfo->captureMeta = (void*)meta;
+    }
+
     g_mutex_lock(&src->manual_buffers_queue_lock);
     g_queue_push_tail(src->manual_buffers, (src->frameInfo));
     g_cond_signal(&src->manual_buffers_queue_cond);

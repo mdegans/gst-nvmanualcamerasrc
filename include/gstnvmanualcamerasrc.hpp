@@ -61,6 +61,7 @@ const auto TNR_MODE = NvManualCamNoiseReductionMode_Off;
 const auto WB_MODE = NvManualCamAwbMode_Auto;
 const bool AE_LOCK = false;
 const bool AWB_LOCK = false;
+const bool METADATA = true;
 const bool BUFAPI = false;
 const bool SILENT = false;
 const float DIGITAL_GAIN = 1.0f;
@@ -90,6 +91,7 @@ typedef struct NvManualCamControls {
   uint64_t exposure_real;  // in nanoseconds
   float gain;              // min: 1, max: 16
   float digital_gain;      // min 1, max: 256
+  gboolean meta_enabled;   // enable metadata generation
   NvManualCamNoiseReductionMode NoiseReductionMode;
   NvManualCamEdgeEnhancementMode EdgeEnhancementMode;
   NvManualCamAeAntibandingMode AeAntibandingMode;
@@ -112,6 +114,7 @@ typedef struct NvManualFrameInfo {
   gint fd;
   guint64 frameNum;
   guint64 frameTime;
+  void* captureMeta;  // Argus::CaptureMetadata
 } NvManualFrameInfo;
 
 struct _GstNvManualCameraSrc {
