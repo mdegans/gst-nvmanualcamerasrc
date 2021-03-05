@@ -925,6 +925,7 @@ static void gst_nv_manual_camera_src_set_property(GObject* object,
       break;
     case PROP_METADATA:
       self->controls.meta_enabled = g_value_get_boolean(value);
+      break;
     case PROP_BUFAPI:
       self->bufApi = g_value_get_boolean(value);
       break;
