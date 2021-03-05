@@ -24,10 +24,6 @@
 
 #include <gst/gst.h>
 
-#define PRODUCER_PRINT(...) GST_INFO("PRODUCER: " __VA_ARGS__)
-#define CONSUMER_PRINT(...) GST_INFO("CONSUMER: " __VA_ARGS__)
-#define PRODUCER_ERROR(...) GST_ERROR("PRODUCER: " __VA_ARGS__)
-
 /**
  * @brief If the return of `statement` is nonzero, logs the returned code with
  * GST_ERROR and returns false.

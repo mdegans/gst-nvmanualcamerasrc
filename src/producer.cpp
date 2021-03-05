@@ -87,7 +87,7 @@ bool producer(int32_t cameraIndex,
     ORIGINATE_ERROR("Failed to create CaptureSession");
 
   self->iCaptureSession_ptr = iCaptureSession;
-  PRODUCER_PRINT("Creating output stream");
+  GST_INFO("Creating output stream");
   UniqueObj<OutputStreamSettings> streamSettings(
       iCaptureSession->createOutputStreamSettings(STREAM_TYPE_EGL));
   IEGLOutputStreamSettings* iStreamSettings =
@@ -142,7 +142,7 @@ bool producer(int32_t cameraIndex,
 
   self->total_sensor_modes = modes.size();
 
-  PRODUCER_PRINT("Available Sensor modes :");
+  GST_INFO("Available Sensor modes :");
   frameRate = self->info.fps_n / self->info.fps_d;
   self->frame_duration = get_frame_duration(self->info);
   ISensorMode* iSensorMode[modes.size()];
@@ -153,7 +153,7 @@ bool producer(int32_t cameraIndex,
     iSensorMode[index] = interface_cast<ISensorMode>(modes[index]);
     sensorModeAnalogGainRange = iSensorMode[index]->getAnalogGainRange();
     limitExposureTimeRange = iSensorMode[index]->getExposureTimeRange();
-    PRODUCER_PRINT(
+    GST_INFO(
         "%d x %d FR = %f fps Duration = %lu ; Analog Gain range min %f, max "
         "%f; Exposure Range min %ju, max %ju;",
         iSensorMode[index]->getResolution().width(),
@@ -190,9 +190,8 @@ bool producer(int32_t cameraIndex,
       /* As request resolution is not supported, switch to default
        * sensormode Index.
        */
-      PRODUCER_PRINT(
-          "Requested resolution W = %d H = %d not supported by Sensor.",
-          streamSize.width(), streamSize.height());
+      GST_INFO("Requested resolution W = %d H = %d not supported by Sensor.",
+               streamSize.width(), streamSize.height());
       cameraMode = 0;
     } else {
       cameraMode = best_match;
@@ -314,7 +313,7 @@ bool producer(int32_t cameraIndex,
     self->aeLockPropSet = FALSE;
   }
 
-  PRODUCER_PRINT(
+  GST_INFO(
       "Running with following settings:\n"
       "   Camera index = %d \n"
       "   Camera mode  = %d \n"
@@ -401,9 +400,9 @@ bool producer(int32_t cameraIndex,
   requestSourceSettings->setFrameDurationRange(
       Range<uint64_t>(1e9 / frameRate));
 
-  PRODUCER_PRINT("Setup Complete, Starting captures for %d seconds", secToRun);
+  GST_INFO("Setup Complete, Starting captures for %d seconds", secToRun);
 
-  PRODUCER_PRINT("Starting repeat capture requests.");
+  GST_INFO("Starting repeat capture requests.");
   Request* captureRequest = request.get();
   self->request_ptr = captureRequest;
   iCaptureSession->capture(captureRequest);
@@ -411,7 +410,7 @@ bool producer(int32_t cameraIndex,
     ORIGINATE_ERROR("Failed to start capture request");
 
   if (self->in_error) {
-    PRODUCER_ERROR("InvalidState.");
+    GST_ERROR("InvalidState.");
     iCaptureSession->cancelRequests();
     self->timeout = 1;
   } else if (secToRun != 0) {
@@ -425,7 +424,7 @@ bool producer(int32_t cameraIndex,
     }
   }
 
-  PRODUCER_PRINT("Cleaning up");
+  GST_INFO("Cleaning up");
 
   iCaptureSession->stopRepeat();
   iCaptureSession->waitForIdle();
@@ -447,7 +446,7 @@ bool producer(int32_t cameraIndex,
   if (self->in_error)
     return false;
 
-  PRODUCER_PRINT("Done Success");
+  GST_INFO("Done Success");
 
   return true;
 }

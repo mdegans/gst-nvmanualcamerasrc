@@ -60,10 +60,10 @@ bool Consumer::threadExecute(GstNvManualCameraSrc* src) {
   IFrameConsumer* iFrameConsumer = interface_cast<IFrameConsumer>(m_consumer);
 
   // Wait until the producer has connected to the stream.
-  CONSUMER_PRINT("Waiting until producer is connected...");
+  GST_INFO("Waiting until producer is connected...");
   if (iStream->waitUntilConnected() != STATUS_OK)
     ORIGINATE_ERROR("Stream failed to connect.");
-  CONSUMER_PRINT("Producer has connected; continuing.");
+  GST_INFO("Producer has connected; continuing.");
   IAutoControlSettings* l_iAutoControlSettings_ptr =
       (IAutoControlSettings*)src->iAutoControlSettings_ptr;
   ICaptureSession* l_iCaptureSession =
@@ -286,15 +286,15 @@ bool Consumer::threadExecute(GstNvManualCameraSrc* src) {
       src->frameInfo->fd = iNativeBuffer->createNvBuffer(
           streamSize, NvBufferColorFormat_YUV420, NvBufferLayout_BlockLinear);
       if (!src->silent)
-        CONSUMER_PRINT("Acquired Frame. %d", src->frameInfo->fd);
+        GST_INFO("Acquired Frame. %d", src->frameInfo->fd);
     } else if (iNativeBuffer->copyToNvBuffer(src->frameInfo->fd) != STATUS_OK) {
       ORIGINATE_ERROR("IImageNativeBuffer not supported by Image.");
     }
 
     if (!src->silent)
-      CONSUMER_PRINT("Acquired Frame: %llu, time %llu",
-                     static_cast<unsigned long long>(iFrame->getNumber()),
-                     static_cast<unsigned long long>(iFrame->getTime()));
+      GST_INFO("Acquired Frame: %llu, time %llu",
+               static_cast<unsigned long long>(iFrame->getNumber()),
+               static_cast<unsigned long long>(iFrame->getTime()));
 
     src->frameInfo->frameNum = iFrame->getNumber();
     src->frameInfo->frameTime = iFrame->getTime();
@@ -331,7 +331,7 @@ bool Consumer::threadExecute(GstNvManualCameraSrc* src) {
 
   g_slice_free(NvManualFrameInfo, src->frameInfo);
   if (!src->in_error) {
-    CONSUMER_PRINT("Done Success");
+    GST_INFO("Done Success");
   }
   PROPAGATE_ERROR(requestShutdown());
   return true;
