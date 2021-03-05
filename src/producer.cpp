@@ -96,7 +96,10 @@ bool producer(int32_t cameraIndex,
     iStreamSettings->setPixelFormat(PIXEL_FMT_YCbCr_420_888);
     iStreamSettings->setResolution(streamSize);
     if (src->controls.meta_enabled) {
+      GST_INFO("Enabling metadata.");
       iStreamSettings->setMetadataEnable(true);
+    } else {
+      GST_INFO("Metadata not enabled.");
     }
   }
   UniqueObj<OutputStream> outputStream(
