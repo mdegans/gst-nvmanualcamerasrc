@@ -29,6 +29,14 @@
 #include "gstnvmanualcamera_utils.h"
 #include <string.h>
 
+namespace nvmanualcam {
+
+guint64 get_frame_duration(const GstVideoInfo& info) {
+  return (guint64)1e9 * info.fps_d / info.fps_n;
+}
+
+}  // namespace nvmanualcam
+
 GType gst_nvmanualcam_white_balance_mode_get_type(void) {
   static gsize white_balance_type = 0;
   static const GEnumValue white_balance_mode[] = {

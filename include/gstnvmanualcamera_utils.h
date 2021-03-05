@@ -30,10 +30,23 @@
 #define B61F7423_3531_4016_9B09_EA5EDB1BB49D
 
 #include <gst/gst.h>
+#include <gst/video/video.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+namespace nvmanualcam {
+
+/**
+ * @brief Get the frame duration in nanoseconds from a GstVideoInfo.
+ *
+ * @param info a GstVideoInfo structure
+ * @return duration of one frame in nanoseconds
+ */
+guint64 get_frame_duration(const GstVideoInfo& info);
+
+}  // namespace nvcvcam
 
 typedef enum {
   NvManualCamAwbMode_Off = 0,

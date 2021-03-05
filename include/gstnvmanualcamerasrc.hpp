@@ -55,6 +55,10 @@ G_BEGIN_DECLS
 
 namespace nvmanualcam::defaults {
 
+const int DEFAULT_FPS = 21;       // mostly ignored, deprecated
+const int DEFAULT_HEIGHT = 1080;  // mostly ignored, deprecated
+const int DEFAULT_WIDTH = 1920;   // mostly ignored, deprecated
+
 const auto AEANTIBANDING_MODE = NvManualCamAeAntibandingMode_Off;
 const auto EE_MODE = NvManualCamEdgeEnhancementMode_Off;
 const auto TNR_MODE = NvManualCamNoiseReductionMode_Off;
