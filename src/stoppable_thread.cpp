@@ -30,6 +30,7 @@
 
 #include "Error.h"
 
+#include <pthread.h>
 #include <unistd.h>  // for useconds_t
 
 namespace nvmanualcam::utils {
