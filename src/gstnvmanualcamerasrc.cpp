@@ -87,8 +87,6 @@ GST_DEBUG_CATEGORY_STATIC(gst_nvmanualcamerasrc_debug);
 
 G_BEGIN_DECLS
 
-using namespace Argus;
-
 enum {
   PROP_0,
   PROP_AE_LOCK,
@@ -423,8 +421,8 @@ static gboolean gst_nv_manual_camera_stop(GstBaseSrc* base) {
   GstNvManualCameraSrc* self = (GstNvManualCameraSrc*)base;
   self->stop_requested = TRUE;
   if (!self->timeout) {
-    ICaptureSession* l_iCaptureSession =
-        (ICaptureSession*)self->iCaptureSession_ptr;
+    Argus::ICaptureSession* l_iCaptureSession =
+        (Argus::ICaptureSession*)self->iCaptureSession_ptr;
     if (l_iCaptureSession) {
       l_iCaptureSession->cancelRequests();
       l_iCaptureSession->stopRepeat();
@@ -445,7 +443,7 @@ static gpointer manual_thread(gpointer base) {
   int32_t cameraIndex = self->sensor_id;
   int32_t cameraMode = self->sensor_mode;
   int32_t secToRun = self->timeout;
-  Size2D<uint32_t> streamSize(self->info.width, self->info.height);
+  Argus::Size2D<uint32_t> streamSize(self->info.width, self->info.height);
 
   nvmanualcam::producer(cameraIndex, cameraMode, streamSize, secToRun, self);
 
