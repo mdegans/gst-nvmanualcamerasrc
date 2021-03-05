@@ -50,7 +50,7 @@ bool producer(int32_t cameraIndex,
               int32_t cameraMode,
               const Size2D<uint32_t>& streamSize,
               int32_t secToRun,
-              GstNvManualCameraSrc* self) {
+              GstNvManualCameraSrc* src) {
   GST_DEBUG_CATEGORY_INIT(gst_nvmanualcamerasrc_producer_debug,
                           "nvmanualcamerasrc:producer", 0,
                           "nvmanualcamerasrc producer");
@@ -86,7 +86,7 @@ bool producer(int32_t cameraIndex,
   if (!iCaptureSession)
     ORIGINATE_ERROR("Failed to create CaptureSession");
 
-  self->iCaptureSession_ptr = iCaptureSession;
+  src->iCaptureSession_ptr = iCaptureSession;
   GST_INFO("Creating output stream");
   UniqueObj<OutputStreamSettings> streamSettings(
       iCaptureSession->createOutputStreamSettings(STREAM_TYPE_EGL));
@@ -95,7 +95,7 @@ bool producer(int32_t cameraIndex,
   if (iStreamSettings) {
     iStreamSettings->setPixelFormat(PIXEL_FMT_YCbCr_420_888);
     iStreamSettings->setResolution(streamSize);
-    if (self->controls.meta_enabled) {
+    if (src->controls.meta_enabled) {
       iStreamSettings->setMetadataEnable(true);
     }
   }
@@ -106,7 +106,7 @@ bool producer(int32_t cameraIndex,
     ORIGINATE_ERROR("Failed to create OutputStream");
 
   utils::Consumer consumerThread(outputStream.get());
-  PROPAGATE_ERROR(consumerThread.initialize(self));
+  PROPAGATE_ERROR(consumerThread.initialize(src));
 
   // Wait until the consumer is connected to the stream.
   PROPAGATE_ERROR(consumerThread.waitRunning());
@@ -114,14 +114,14 @@ bool producer(int32_t cameraIndex,
   // Create capture request and enable output stream.
   UniqueObj<Request> request(iCaptureSession->createRequest());
   IRequest* iRequest = interface_cast<IRequest>(request);
-  self->iRequest_ptr = iRequest;
+  src->iRequest_ptr = iRequest;
   if (!iRequest)
     ORIGINATE_ERROR("Failed to create Request");
   iRequest->enableOutputStream(outputStream.get());
 
   IAutoControlSettings* iAutoControlSettings =
       interface_cast<IAutoControlSettings>(iRequest->getAutoControlSettings());
-  self->iAutoControlSettings_ptr = iAutoControlSettings;
+  src->iAutoControlSettings_ptr = iAutoControlSettings;
   std::vector<SensorMode*> modes;
   ICameraProperties* camProps =
       interface_cast<ICameraProperties>(cameraDevices[cameraIndex]);
@@ -133,18 +133,18 @@ bool producer(int32_t cameraIndex,
       interface_cast<ISourceSettings>(iRequest->getSourceSettings());
   if (!requestSourceSettings)
     ORIGINATE_ERROR("Failed to get request source settings");
-  self->iRequestSourceSettings_ptr = requestSourceSettings;
+  src->iRequestSourceSettings_ptr = requestSourceSettings;
 
   if (cameraMode != nvmanualcam::defaults::SENSOR_MODE_STATE &&
       static_cast<uint32_t>(cameraMode) >= modes.size())
     ORIGINATE_ERROR("Invalid sensor mode %d selected %d present", cameraMode,
                     static_cast<int32_t>(modes.size()));
 
-  self->total_sensor_modes = modes.size();
+  src->total_sensor_modes = modes.size();
 
   GST_INFO("Available Sensor modes :");
-  frameRate = self->info.fps_n / self->info.fps_d;
-  self->frame_duration = get_frame_duration(self->info);
+  frameRate = src->info.fps_n / src->info.fps_d;
+  src->frame_duration = get_frame_duration(src->info);
   ISensorMode* iSensorMode[modes.size()];
   Range<float> sensorModeAnalogGainRange;
   Range<float> ispDigitalGainRange;
@@ -166,7 +166,7 @@ bool producer(int32_t cameraIndex,
     if (cameraMode == nvmanualcam::defaults::SENSOR_MODE_STATE) {
       if (streamSize.width() <= iSensorMode[index]->getResolution().width() &&
           streamSize.height() <= iSensorMode[index]->getResolution().height() &&
-          self->frame_duration >=
+          src->frame_duration >=
               (iSensorMode[index]->getFrameDurationRange().min())) {
         if (best_match == -1 ||
             ((streamSize.width() ==
@@ -198,30 +198,30 @@ bool producer(int32_t cameraIndex,
     }
   }
   /* Update Sensor Mode*/
-  self->sensor_mode = cameraMode;
+  src->sensor_mode = cameraMode;
 
   if (frameRate >
       round((1e9 / (iSensorMode[cameraMode]->getFrameDurationRange().min())))) {
-    self->in_error = TRUE;
-    GST_ERROR_OBJECT(self,
+    src->in_error = TRUE;
+    GST_ERROR_OBJECT(src,
                      "Frame Rate specified (%d/%d) is greater than supported.",
-                     self->info.fps_n, self->info.fps_d);
+                     src->info.fps_n, src->info.fps_d);
   }
 
   IDenoiseSettings* denoiseSettings = interface_cast<IDenoiseSettings>(request);
   if (!denoiseSettings)
     ORIGINATE_ERROR("Failed to get DenoiseSettings interface");
-  self->iDenoiseSettings_ptr = denoiseSettings;
+  src->iDenoiseSettings_ptr = denoiseSettings;
 
   IEdgeEnhanceSettings* eeSettings =
       interface_cast<IEdgeEnhanceSettings>(request);
   if (!eeSettings)
     ORIGINATE_ERROR("Failed to get EdgeEnhancementSettings interface");
-  self->iEeSettings_ptr = eeSettings;
+  src->iEeSettings_ptr = eeSettings;
 
   /* Setting Noise Reduction Mode and Strength*/
-  if (self->tnrModePropSet) {
-    switch (self->controls.NoiseReductionMode) {
+  if (src->tnrModePropSet) {
+    switch (src->controls.NoiseReductionMode) {
       case NvManualCamNoiseReductionMode_Off:
         denoiseSettings->setDenoiseMode(DENOISE_MODE_OFF);
         break;
@@ -235,17 +235,17 @@ bool producer(int32_t cameraIndex,
         denoiseSettings->setDenoiseMode(DENOISE_MODE_OFF);
         break;
     }
-    self->tnrModePropSet = FALSE;
+    src->tnrModePropSet = FALSE;
   }
 
-  if (self->tnrStrengthPropSet) {
-    denoiseSettings->setDenoiseStrength(self->controls.NoiseReductionStrength);
-    self->tnrStrengthPropSet = FALSE;
+  if (src->tnrStrengthPropSet) {
+    denoiseSettings->setDenoiseStrength(src->controls.NoiseReductionStrength);
+    src->tnrStrengthPropSet = FALSE;
   }
 
   /* Setting Edge Enhancement Mode and Strength*/
-  if (self->edgeEnhancementModePropSet) {
-    switch (self->controls.EdgeEnhancementMode) {
+  if (src->edgeEnhancementModePropSet) {
+    switch (src->controls.EdgeEnhancementMode) {
       case NvManualCamEdgeEnhancementMode_Off:
         eeSettings->setEdgeEnhanceMode(EDGE_ENHANCE_MODE_OFF);
         break;
@@ -259,17 +259,17 @@ bool producer(int32_t cameraIndex,
         eeSettings->setEdgeEnhanceMode(EDGE_ENHANCE_MODE_OFF);
         break;
     }
-    self->edgeEnhancementModePropSet = FALSE;
+    src->edgeEnhancementModePropSet = FALSE;
   }
 
-  if (self->edgeEnhancementStrengthPropSet) {
-    eeSettings->setEdgeEnhanceStrength(self->controls.EdgeEnhancementStrength);
-    self->edgeEnhancementStrengthPropSet = FALSE;
+  if (src->edgeEnhancementStrengthPropSet) {
+    eeSettings->setEdgeEnhanceStrength(src->controls.EdgeEnhancementStrength);
+    src->edgeEnhancementStrengthPropSet = FALSE;
   }
 
   /* Setting AE Antibanding Mode */
-  if (self->aeAntibandingPropSet) {
-    switch (self->controls.AeAntibandingMode) {
+  if (src->aeAntibandingPropSet) {
+    switch (src->controls.AeAntibandingMode) {
       case NvManualCamAeAntibandingMode_Off:
         iAutoControlSettings->setAeAntibandingMode(AE_ANTIBANDING_MODE_OFF);
         break;
@@ -286,31 +286,31 @@ bool producer(int32_t cameraIndex,
         iAutoControlSettings->setAeAntibandingMode(AE_ANTIBANDING_MODE_OFF);
         break;
     }
-    self->aeAntibandingPropSet = FALSE;
+    src->aeAntibandingPropSet = FALSE;
   }
 
-  if (self->exposureCompensationPropSet) {
+  if (src->exposureCompensationPropSet) {
     iAutoControlSettings->setExposureCompensation(
-        self->controls.ExposureCompensation);
-    self->exposureCompensationPropSet = FALSE;
+        src->controls.ExposureCompensation);
+    src->exposureCompensationPropSet = FALSE;
   }
 
   /* Setting auto white balance lock */
-  if (self->awbLockPropSet) {
-    if (self->controls.AwbLock)
+  if (src->awbLockPropSet) {
+    if (src->controls.AwbLock)
       iAutoControlSettings->setAwbLock(true);
     else
       iAutoControlSettings->setAwbLock(false);
-    self->awbLockPropSet = FALSE;
+    src->awbLockPropSet = FALSE;
   }
 
   /* Setting auto exposure lock */
-  if (self->aeLockPropSet) {
-    if (self->controls.AeLock)
+  if (src->aeLockPropSet) {
+    if (src->controls.AeLock)
       iAutoControlSettings->setAeLock(true);
     else
       iAutoControlSettings->setAeLock(false);
-    self->aeLockPropSet = FALSE;
+    src->aeLockPropSet = FALSE;
   }
 
   GST_INFO(
@@ -325,8 +325,8 @@ bool producer(int32_t cameraIndex,
       (1e9 / (iSensorMode[cameraMode]->getFrameDurationRange().min())));
 
   /* Setting white balance property */
-  if (self->wbPropSet) {
-    switch (self->controls.wbmode) {
+  if (src->wbPropSet) {
+    switch (src->controls.wbmode) {
       case NvManualCamAwbMode_Off:
         iAutoControlSettings->setAwbMode(AWB_MODE_OFF);
         break;
@@ -361,39 +361,39 @@ bool producer(int32_t cameraIndex,
         iAutoControlSettings->setAwbMode(AWB_MODE_OFF);
         break;
     }
-    self->wbPropSet = FALSE;
+    src->wbPropSet = FALSE;
   }
 
   /* Setting color saturation property */
-  if (self->saturationPropSet) {
+  if (src->saturationPropSet) {
     iAutoControlSettings->setColorSaturationEnable(TRUE);
-    iAutoControlSettings->setColorSaturation(self->controls.saturation);
-    self->saturationPropSet = false;
+    iAutoControlSettings->setColorSaturation(src->controls.saturation);
+    src->saturationPropSet = false;
   }
 
-  if (self->exposureTimePropSet) {
-    limitExposureTimeRange.min() = self->controls.exposure_real;
-    limitExposureTimeRange.max() = self->controls.exposure_real;
+  if (src->exposureTimePropSet) {
+    limitExposureTimeRange.min() = src->controls.exposure_real;
+    limitExposureTimeRange.max() = src->controls.exposure_real;
     requestSourceSettings->setExposureTimeRange(limitExposureTimeRange);
-    self->exposureTimePropSet = false;
+    src->exposureTimePropSet = false;
   }
 
-  if (self->gainPropSet) {
-    sensorModeAnalogGainRange.min() = self->controls.gain;
-    sensorModeAnalogGainRange.max() = self->controls.gain;
+  if (src->gainPropSet) {
+    sensorModeAnalogGainRange.min() = src->controls.gain;
+    sensorModeAnalogGainRange.max() = src->controls.gain;
     requestSourceSettings->setGainRange(sensorModeAnalogGainRange);
-    self->gainPropSet = false;
+    src->gainPropSet = false;
   }
 
-  if (self->ispDigitalGainPropSet) {
-    ispDigitalGainRange.min() = self->controls.digital_gain;
-    ispDigitalGainRange.max() = self->controls.digital_gain;
+  if (src->ispDigitalGainPropSet) {
+    ispDigitalGainRange.min() = src->controls.digital_gain;
+    ispDigitalGainRange.max() = src->controls.digital_gain;
     iAutoControlSettings->setIspDigitalGainRange(ispDigitalGainRange);
-    self->ispDigitalGainPropSet = false;
+    src->ispDigitalGainPropSet = false;
   }
 
   requestSourceSettings->setSensorMode(modes[cameraMode]);
-  if (!self->info.fps_n) {
+  if (!src->info.fps_n) {
     frameRate = defaults::DEFAULT_FPS;
   }
 
@@ -404,23 +404,23 @@ bool producer(int32_t cameraIndex,
 
   GST_INFO("Starting repeat capture requests.");
   Request* captureRequest = request.get();
-  self->request_ptr = captureRequest;
+  src->request_ptr = captureRequest;
   iCaptureSession->capture(captureRequest);
   if (iCaptureSession->capture(captureRequest) == 0)
     ORIGINATE_ERROR("Failed to start capture request");
 
-  if (self->in_error) {
+  if (src->in_error) {
     GST_ERROR("InvalidState.");
     iCaptureSession->cancelRequests();
-    self->timeout = 1;
+    src->timeout = 1;
   } else if (secToRun != 0) {
     sleep(secToRun);
     iCaptureSession->cancelRequests();
   } else {
-    if (self->stop_requested == FALSE) {
-      g_mutex_lock(&self->eos_lock);
-      g_cond_wait(&self->eos_cond, &self->eos_lock);
-      g_mutex_unlock(&self->eos_lock);
+    if (src->stop_requested == FALSE) {
+      g_mutex_lock(&src->eos_lock);
+      g_cond_wait(&src->eos_cond, &src->eos_lock);
+      g_mutex_unlock(&src->eos_lock);
     }
   }
 
@@ -434,16 +434,16 @@ bool producer(int32_t cameraIndex,
   outputStream.reset();
 
   // Manual execution completed, signal the buffer consumed cond.
-  if (!self->is_manual_buffer_consumed) {
-    g_mutex_lock(&self->manual_buffer_consumed_lock);
-    g_cond_signal(&self->manual_buffer_consumed_cond);
-    self->is_manual_buffer_consumed = TRUE;
-    g_mutex_unlock(&self->manual_buffer_consumed_lock);
+  if (!src->is_manual_buffer_consumed) {
+    g_mutex_lock(&src->manual_buffer_consumed_lock);
+    g_cond_signal(&src->manual_buffer_consumed_cond);
+    src->is_manual_buffer_consumed = TRUE;
+    g_mutex_unlock(&src->manual_buffer_consumed_lock);
   }
   // Wait for the consumer thread to complete.
   PROPAGATE_ERROR(consumerThread.shutdown());
 
-  if (self->in_error)
+  if (src->in_error)
     return false;
 
   GST_INFO("Done Success");
