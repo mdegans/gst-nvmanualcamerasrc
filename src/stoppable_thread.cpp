@@ -51,7 +51,7 @@ bool StoppableThread::initialize(GstNvManualCameraSrc* src) {
 
   this->src = src;
 
-  if (pthread_create(&m_threadID, NULL, threadFunctionStub, this) != 0)
+  if (pthread_create(&m_threadID, nullptr, threadFunctionStub, this) != 0)
     ORIGINATE_ERROR("Failed to create thread.");
 
   // wait for the thread to start up
@@ -64,7 +64,7 @@ bool StoppableThread::initialize(GstNvManualCameraSrc* src) {
 bool StoppableThread::shutdown() {
   if (m_threadID) {
     m_doShutdown = true;
-    if (pthread_join(m_threadID, NULL) != 0)
+    if (pthread_join(m_threadID, nullptr) != 0)
       ORIGINATE_ERROR("Failed to join thread");
     m_threadID = 0;
     m_doShutdown = false;
@@ -109,7 +109,7 @@ bool StoppableThread::waitRunning(useconds_t timeoutUs) {
   else
     thread->m_threadState = StoppableThread::THREAD_DONE;
 
-  return NULL;
+  return nullptr;
 }
 
 /**

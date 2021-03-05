@@ -187,8 +187,8 @@ static GstMemory* gst_nv_memory_allocator_alloc(GstAllocator* allocator,
                                                 gsize size,
                                                 GstAllocationParams* params) {
   int err = 0;
-  GstNVManualMemory* mem = NULL;
-  GstNvManualCameraSrcBuffer* nvbuf = NULL;
+  GstNVManualMemory* mem = nullptr;
+  GstNvManualCameraSrcBuffer* nvbuf = nullptr;
   GstMemoryFlags flags = GST_MEMORY_FLAG_NO_SHARE;
   NvBufferParams param = {0};
   NvBufferCreateParams input_params = {0};
@@ -220,7 +220,7 @@ static GstMemory* gst_nv_memory_allocator_alloc(GstAllocator* allocator,
       goto getparam_failed;
     }
 
-    gst_memory_init(GST_MEMORY_CAST(mem), flags, allocator, NULL,
+    gst_memory_init(GST_MEMORY_CAST(mem), flags, allocator, nullptr,
                     param.nv_buffer_size, 1 /* Alignment */, 0,
                     param.nv_buffer_size);
     mem->nvcam_buf = nvbuf;
@@ -239,7 +239,7 @@ error:
   g_slice_free(GstNvManualCameraSrcBuffer, nvbuf);
   g_slice_free(GstNVManualMemory, mem);
 
-  return NULL;
+  return nullptr;
 }
 
 static void gst_nv_memory_allocator_free(GstAllocator* allocator,
@@ -294,7 +294,7 @@ static void gst_nv_manual_camera_src_finalize(GObject* object);
 /* GObject vmethod implementations */
 
 static GstCaps* gst_nv_manual_camera_fixate(GstBaseSrc* base, GstCaps* caps) {
-  GstStructure* structure = NULL;
+  GstStructure* structure = nullptr;
 
   caps = gst_caps_make_writable(caps);
 
@@ -334,7 +334,7 @@ static gboolean gst_nv_manual_camera_set_caps(GstBaseSrc* base, GstCaps* caps) {
     if (caps)
       self->outcaps = gst_caps_copy(caps);
     else
-      self->outcaps = NULL;
+      self->outcaps = nullptr;
     if (old)
       gst_caps_unref(old);
   }
@@ -343,13 +343,13 @@ static gboolean gst_nv_manual_camera_set_caps(GstBaseSrc* base, GstCaps* caps) {
     self->pool = gst_buffer_pool_new();
     GstNVManualMemoryAllocator* allocator =
         (GstNVManualMemoryAllocator*)g_object_new(
-            gst_nv_memory_allocator_get_type(), NULL);
+            gst_nv_memory_allocator_get_type(), nullptr);
     allocator->owner = self;
     GstStructure* config = gst_buffer_pool_get_config(self->pool);
     gst_buffer_pool_config_set_allocator(config, GST_ALLOCATOR(allocator),
-                                         NULL);
+                                         nullptr);
 
-    gst_buffer_pool_config_set_params(config, NULL, NvBufferGetSize(),
+    gst_buffer_pool_config_set_params(config, nullptr, NvBufferGetSize(),
                                       MIN_BUFFERS, MAX_BUFFERS);
     gst_buffer_pool_set_config(self->pool, config);
 
@@ -364,7 +364,7 @@ static gboolean gst_nv_manual_camera_set_caps(GstBaseSrc* base, GstCaps* caps) {
         config, self->outcaps, sizeof(NvBufSurface), MIN_BUFFERS, MAX_BUFFERS);
     gst_structure_set(config, "memtype", G_TYPE_INT, NVBUF_MEM_DEFAULT,
                       "gpu-id", G_TYPE_UINT, 0, "batch-size", G_TYPE_UINT, 1,
-                      NULL);
+                      nullptr);
     gst_buffer_pool_set_config(self->pool, config);
     self->manual_buffers = g_queue_new();
     self->nvmm_buffers = g_queue_new();
@@ -457,7 +457,7 @@ static gpointer consumer_thread(gpointer base) {
   GstMemory* mem;
   NvManualFrameInfo* consumerFrameInfo;
   GstFlowReturn ret;
-  GstNVManualMemory* nv_mem = NULL;
+  GstNVManualMemory* nv_mem = nullptr;
   static GQuark gst_buffer_metadata_quark = 0;
   gst_buffer_metadata_quark = g_quark_from_static_string("GstBufferMetaData");
 
@@ -477,10 +477,10 @@ static gpointer consumer_thread(gpointer base) {
     consumerFrameInfo =
         (NvManualFrameInfo*)g_queue_pop_head(self->manual_buffers);
     g_mutex_unlock(&self->manual_buffers_queue_lock);
-    if (&consumerFrameInfo->fd == NULL) {
+    if (&consumerFrameInfo->fd == nullptr) {
       goto done;
     }
-    ret = gst_buffer_pool_acquire_buffer(self->pool, &buffer, NULL);
+    ret = gst_buffer_pool_acquire_buffer(self->pool, &buffer, nullptr);
     if (ret != GST_FLOW_OK) {
       if (!self->stop_requested) {
         GST_ERROR_OBJECT(self, "Error in pool acquire buffer");
@@ -500,7 +500,7 @@ static gpointer consumer_thread(gpointer base) {
       nv_mem->auxData.meta = consumerFrameInfo->meta;
       gst_mini_object_set_qdata(GST_MINI_OBJECT_CAST(buffer),
                                 gst_buffer_metadata_quark,
-                                &((GstNVManualMemory*)mem)->auxData, NULL);
+                                &((GstNVManualMemory*)mem)->auxData, nullptr);
 
       err =
           NvBufferTransform(consumerFrameInfo->fd, nv_mem->nvcam_buf->dmabuf_fd,
@@ -554,9 +554,9 @@ done:
                    self->stop_requested);
   if (buffer) {
     gst_mini_object_set_qdata(GST_MINI_OBJECT_CAST(buffer),
-                              gst_buffer_metadata_quark, NULL, NULL);
+                              gst_buffer_metadata_quark, nullptr, nullptr);
   }
-  return NULL;
+  return nullptr;
 }
 
 static GstFlowReturn gst_nv_manual_camera_create(GstBaseSrc* base,
@@ -565,7 +565,7 @@ static GstFlowReturn gst_nv_manual_camera_create(GstBaseSrc* base,
                                                  GstBuffer** buf) {
   GstNvManualCameraSrc* self = GST_NVMANUALCAMERASRC(base);
   GstFlowReturn ret = GST_FLOW_OK;
-  GstBuffer* gst_buf = NULL;
+  GstBuffer* gst_buf = nullptr;
 
   if (self->stop_requested || self->unlock_requested)
     return GST_FLOW_EOS;
@@ -798,7 +798,7 @@ static void gst_nv_manual_camera_src_init(GstNvManualCameraSrc* self) {
   self->stop_requested = FALSE;
   self->unlock_requested = FALSE;
   self->silent = TRUE;
-  self->outcaps = NULL;
+  self->outcaps = nullptr;
   self->timeout = 0;
   self->in_error = FALSE;
   self->sensor_id = nvmanualcam::defaults::SENSOR_ID;
