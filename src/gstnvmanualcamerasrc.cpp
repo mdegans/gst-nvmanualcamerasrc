@@ -103,6 +103,7 @@ enum {
 typedef struct AuxiliaryData {
   gint64 frame_num;
   gint64 timestamp;
+  Argus::CaptureMetadata* meta;
 } AuxData;
 
 struct _GstNVManualMemory {
@@ -496,6 +497,7 @@ static gpointer consumer_thread(gpointer base) {
       nv_mem = (GstNVManualMemory*)mem;
       nv_mem->auxData.frame_num = consumerFrameInfo->frameNum;
       nv_mem->auxData.timestamp = consumerFrameInfo->frameTime;
+      nv_mem->auxData.meta = consumerFrameInfo->meta;
       gst_mini_object_set_qdata(GST_MINI_OBJECT_CAST(buffer),
                                 gst_buffer_metadata_quark,
                                 &((GstNVManualMemory*)mem)->auxData, NULL);

@@ -302,6 +302,7 @@ bool Consumer::threadExecute(GstNvManualCameraSrc* src) {
     // Attach capture metadata to frameInfo
     // TODO(mdegans): research gstreamer frame level metadata to see if there is
     //  a better way to do this.
+    src->frameInfo->meta = nullptr;
     if (src->controls.meta_enabled) {
       auto iArgusCaptureMetadata =
           Argus::interface_cast<IArgusCaptureMetadata>(frame);
@@ -313,7 +314,7 @@ bool Consumer::threadExecute(GstNvManualCameraSrc* src) {
       if (!meta) {
         ORIGINATE_ERROR("Could not get Argus::CaptureMetadata");
       }
-      src->frameInfo->captureMeta = (void*)meta;
+      src->frameInfo->meta = meta;
     }
 
     g_mutex_lock(&src->manual_buffers_queue_lock);

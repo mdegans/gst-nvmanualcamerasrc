@@ -34,6 +34,8 @@
 #include "nvbuf_utils.h"
 #include "nvbufsurface.h"
 
+#include <Argus/Argus.h>
+
 #include <gst/base/gstbasesrc.h>
 #include <gst/gst.h>
 #include <gst/video/video.h>
@@ -118,7 +120,7 @@ typedef struct NvManualFrameInfo {
   gint fd;
   guint64 frameNum;
   guint64 frameTime;
-  void* captureMeta;  // Argus::CaptureMetadata
+  Argus::CaptureMetadata* meta;  // Argus::CaptureMetadata
 } NvManualFrameInfo;
 
 struct _GstNvManualCameraSrc {
