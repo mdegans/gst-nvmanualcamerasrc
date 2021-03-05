@@ -44,20 +44,10 @@
 #include "logging.hpp"
 #include "producer.hpp"
 
+#include <Argus/Argus.h>
+
 #include <gst/base/gstbasesrc.h>
 #include <gst/gst.h>
-#include <gst/video/video.h>
-#include <cstdlib>
-
-#include <Argus/Argus.h>
-#include <Error.h>
-#include <Ordered.h>
-
-#include <EGLStream/EGLStream.h>
-#include <fstream>
-#include <iostream>
-
-#include <pthread.h>
 
 static const char* CAPTURE_CAPS =
     "video/x-raw(memory:NVMM), "
