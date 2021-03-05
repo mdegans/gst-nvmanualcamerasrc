@@ -26,6 +26,9 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#ifndef BE8F5BDB_683D_4A2B_8CC8_3AFA81C7EDFC
+#define BE8F5BDB_683D_4A2B_8CC8_3AFA81C7EDFC
+
 #include "Ordered.h"
 
 #include "gstnvmanualcamerasrc.hpp"
@@ -98,3 +101,5 @@ class StoppableThread {
 };
 
 }  // namespace nvmanualcam::utils
+
+#endif /* BE8F5BDB_683D_4A2B_8CC8_3AFA81C7EDFC */
