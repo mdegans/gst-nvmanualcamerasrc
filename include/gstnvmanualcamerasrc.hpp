@@ -174,7 +174,7 @@ struct _GstNvManualCameraSrc {
   gboolean aeLockPropSet;
   gboolean awbLockPropSet;
   gboolean bufApi;
-  gboolean manual_in_error;
+  gboolean in_error;
   void* iRequest_ptr;
   void* iCaptureSession_ptr;
   void* iAutoControlSettings_ptr;

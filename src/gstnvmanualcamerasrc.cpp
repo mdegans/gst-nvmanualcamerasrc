@@ -266,7 +266,7 @@ static bool execute(int32_t cameraIndex,
 
   if (frameRate >
       round((1e9 / (iSensorMode[cameraMode]->getFrameDurationRange().min())))) {
-    self->manual_in_error = TRUE;
+    self->in_error = TRUE;
     GST_ERROR_OBJECT(self,
                      "Frame Rate specified (%d/%d) is greater than supported.",
                      self->info.fps_n, self->info.fps_d);
@@ -473,7 +473,7 @@ static bool execute(int32_t cameraIndex,
   if (iCaptureSession->capture(captureRequest) == 0)
     ORIGINATE_ERROR("Failed to start capture request");
 
-  if (self->manual_in_error) {
+  if (self->in_error) {
     PRODUCER_ERROR("InvalidState.");
     iCaptureSession->cancelRequests();
     self->timeout = 1;
@@ -507,7 +507,7 @@ static bool execute(int32_t cameraIndex,
   // Wait for the consumer thread to complete.
   PROPAGATE_ERROR(consumerThread.shutdown());
 
-  if (self->manual_in_error)
+  if (self->in_error)
     return false;
 
   PRODUCER_PRINT("Done Success");
@@ -821,7 +821,7 @@ static gboolean gst_nv_manual_camera_set_caps(GstBaseSrc* base, GstCaps* caps) {
 
   self->manual_thread = g_thread_new("manual_thread", manual_thread, self);
 
-  if (self->manual_in_error) {
+  if (self->in_error) {
     return FALSE;
   }
 
@@ -1244,7 +1244,7 @@ static void gst_nv_manual_camera_src_init(GstNvManualCameraSrc* self) {
   self->silent = TRUE;
   self->outcaps = NULL;
   self->timeout = 0;
-  self->manual_in_error = FALSE;
+  self->in_error = FALSE;
   self->sensor_id = nvmanualcam::defaults::SENSOR_ID;
   self->sensor_mode = nvmanualcam::defaults::SENSOR_MODE_STATE;
   self->total_sensor_modes = nvmanualcam::defaults::TOTAL_SENSOR_MODES;

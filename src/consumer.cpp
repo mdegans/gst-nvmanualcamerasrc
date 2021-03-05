@@ -330,7 +330,7 @@ bool Consumer::threadExecute(GstNvManualCameraSrc* src) {
   }
 
   g_slice_free(NvManualFrameInfo, src->frameInfo);
-  if (!src->manual_in_error) {
+  if (!src->in_error) {
     CONSUMER_PRINT("Done Success");
   }
   PROPAGATE_ERROR(requestShutdown());
