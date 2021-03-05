@@ -73,8 +73,6 @@ static const char* GST_NVMANUAL_MEMORY_TYPE = "nvarguscam";
 GST_DEBUG_CATEGORY_STATIC(gst_nvmanualcamerasrc_debug);
 #define GST_CAT_DEFAULT gst_nvmanualcamerasrc_debug
 
-// begin helpers
-
 G_BEGIN_DECLS
 
 enum {
