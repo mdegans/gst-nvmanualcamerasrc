@@ -339,6 +339,7 @@ bool Consumer::threadExecute(GstNvManualCameraSrc* src) {
 }
 
 bool Consumer::threadShutdown(GstNvManualCameraSrc* src) {
+  (void)src;
   return true;
 }
 

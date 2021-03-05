@@ -159,9 +159,11 @@ static gpointer manual_thread(gpointer base);
 static gpointer gst_nv_memory_map(GstMemory* mem,
                                   gsize maxsize,
                                   GstMapFlags flags) {
+  (void)flags;
+  (void)maxsize;
   int err = 0;
   GstNVManualMemory* nvmm_mem = (GstNVManualMemory*)mem;
-  NvBufferParams params = {0};
+  NvBufferParams params{};
 
   err = NvBufferGetParams(nvmm_mem->nvcam_buf->dmabuf_fd, &params);
   if (err) {
@@ -173,12 +175,16 @@ static gpointer gst_nv_memory_map(GstMemory* mem,
 }
 
 static void gst_nv_memory_unmap(GstMemory* mem) {
+  (void)mem;
   /* Nothing needs to be done */
 }
 
 static GstMemory* gst_nv_memory_share(GstMemory* mem,
                                       gssize offset,
                                       gssize size) {
+  (void)mem;
+  (void)offset;
+  (void)size;
   g_assert_not_reached();
   return nullptr;
 }
@@ -186,12 +192,14 @@ static GstMemory* gst_nv_memory_share(GstMemory* mem,
 static GstMemory* gst_nv_memory_allocator_alloc(GstAllocator* allocator,
                                                 gsize size,
                                                 GstAllocationParams* params) {
+  (void)size;
+  (void)params;
   int err = 0;
   GstNVManualMemory* mem = nullptr;
   GstNvManualCameraSrcBuffer* nvbuf = nullptr;
   GstMemoryFlags flags = GST_MEMORY_FLAG_NO_SHARE;
-  NvBufferParams param = {0};
-  NvBufferCreateParams input_params = {0};
+  NvBufferParams param{};
+  NvBufferCreateParams input_params{};
 
   GstNVManualMemoryAllocator* nvmm_allocator =
       GST_NVMEMORY_ALLOCATOR(allocator);
@@ -244,6 +252,7 @@ error:
 
 static void gst_nv_memory_allocator_free(GstAllocator* allocator,
                                          GstMemory* mem) {
+  (void)allocator;
   GstNVManualMemory* nv_mem = (GstNVManualMemory*)mem;
   GstNvManualCameraSrcBuffer* nvbuf = nv_mem->nvcam_buf;
 
@@ -563,6 +572,8 @@ static GstFlowReturn gst_nv_manual_camera_create(GstBaseSrc* base,
                                                  guint64 offset,
                                                  guint size,
                                                  GstBuffer** buf) {
+  (void)offset;
+  (void)size;
   GstNvManualCameraSrc* self = GST_NVMANUALCAMERASRC(base);
   GstFlowReturn ret = GST_FLOW_OK;
   GstBuffer* gst_buf = nullptr;
