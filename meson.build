@@ -27,7 +27,7 @@ project('gstnvmanualcamerasrc', ['cpp'],
   license: 'Proprietary',
   default_options: [
     'cpp_std=c++17',
-    'warning_level=1',  # -Wall
+    'warning_level=2',  # -Wall, -Wextra
     'werror=true',  # -Werror
   ],
 )
