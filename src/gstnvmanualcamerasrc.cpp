@@ -606,20 +606,17 @@ static gpointer manual_thread(gpointer base);
 static gpointer gst_nv_memory_map(GstMemory* mem,
                                   gsize maxsize,
                                   GstMapFlags flags) {
-  gint ret = 0;
+  int err = 0;
   GstNVManualMemory* nvmm_mem = (GstNVManualMemory*)mem;
   NvBufferParams params = {0};
 
-  ret = NvBufferGetParams(nvmm_mem->nvcam_buf->dmabuf_fd, &params);
-  if (ret != 0) {
-    GST_ERROR("%s: NvBufferGetParams Failed ", __func__);
-    goto error;
+  err = NvBufferGetParams(nvmm_mem->nvcam_buf->dmabuf_fd, &params);
+  if (err) {
+    GST_ERROR("NvBufferGetParams Failed");
+    return nullptr;
   }
 
   return (gpointer)(params.nv_buffer);
-
-error:
-  return NULL;
 }
 
 static void gst_nv_memory_unmap(GstMemory* mem) {
@@ -630,13 +627,13 @@ static GstMemory* gst_nv_memory_share(GstMemory* mem,
                                       gssize offset,
                                       gssize size) {
   g_assert_not_reached();
-  return NULL;
+  return nullptr;
 }
 
 static GstMemory* gst_nv_memory_allocator_alloc(GstAllocator* allocator,
                                                 gsize size,
                                                 GstAllocationParams* params) {
-  gint ret = 0;
+  int err = 0;
   GstNVManualMemory* mem = NULL;
   GstNvManualCameraSrcBuffer* nvbuf = NULL;
   GstMemoryFlags flags = GST_MEMORY_FLAG_NO_SHARE;
@@ -658,15 +655,15 @@ static GstMemory* gst_nv_memory_allocator_alloc(GstAllocator* allocator,
     input_params.payloadType = NvBufferPayload_SurfArray;
     input_params.nvbuf_tag = NvBufferTag_CAMERA;
 
-    ret = NvBufferCreateEx(&nvbuf->dmabuf_fd, &input_params);
-    if (ret != 0) {
-      GST_ERROR("%s: NvBufferCreateEx Failed ", __func__);
+    err = NvBufferCreateEx(&nvbuf->dmabuf_fd, &input_params);
+    if (err) {
+      GST_ERROR("NvBufferCreateEx Failed");
       goto error;
     }
 
-    ret = NvBufferGetParams(nvbuf->dmabuf_fd, &param);
-    if (ret != 0) {
-      GST_ERROR("%s: NvBufferGetParams Failed ", __func__);
+    err = NvBufferGetParams(nvbuf->dmabuf_fd, &param);
+    if (err) {
+      GST_ERROR("NvBufferGetParams Failed");
       goto getparam_failed;
     }
 
@@ -680,9 +677,9 @@ static GstMemory* gst_nv_memory_allocator_alloc(GstAllocator* allocator,
 getparam_failed :
 
 {
-  ret = NvBufferDestroy(nvbuf->dmabuf_fd);
-  if (ret != 0) {
-    GST_ERROR("%s: NvBufferDestroy Failed ", __func__);
+  err = NvBufferDestroy(nvbuf->dmabuf_fd);
+  if (err) {
+    GST_ERROR("NvBufferDestroy Failed");
   }
 }
 error:
@@ -694,17 +691,14 @@ error:
 
 static void gst_nv_memory_allocator_free(GstAllocator* allocator,
                                          GstMemory* mem) {
-  gint ret = 0;
   GstNVManualMemory* nv_mem = (GstNVManualMemory*)mem;
   GstNvManualCameraSrcBuffer* nvbuf = nv_mem->nvcam_buf;
 
-  ret = NvBufferDestroy(nvbuf->dmabuf_fd);
-  if (ret != 0) {
-    GST_ERROR("%s: NvBufferDestroy Failed ", __func__);
-    goto error;
+  int err = NvBufferDestroy(nvbuf->dmabuf_fd);
+  if (err) {
+    GST_ERROR("NvBufferDestroy Failed");
   }
 
-error:
   g_slice_free(GstNvManualCameraSrcBuffer, nvbuf);
   g_slice_free(GstNVManualMemory, nv_mem);
 }
@@ -903,7 +897,7 @@ static gpointer manual_thread(gpointer base) {
 }
 
 static gpointer consumer_thread(gpointer base) {
-  gint retn = 0;
+  int err = 0;
   GstBuffer* buffer;
   GstMemory* mem;
   NvManualFrameInfo* consumerFrameInfo;
@@ -952,14 +946,14 @@ static gpointer consumer_thread(gpointer base) {
                                 gst_buffer_metadata_quark,
                                 &((GstNVManualMemory*)mem)->auxData, NULL);
 
-      retn =
+      err =
           NvBufferTransform(consumerFrameInfo->fd, nv_mem->nvcam_buf->dmabuf_fd,
                             &self->transform_params);
       g_mutex_lock(&self->manual_buffer_consumed_lock);
       g_cond_signal(&self->manual_buffer_consumed_cond);
       self->is_manual_buffer_consumed = TRUE;
       g_mutex_unlock(&self->manual_buffer_consumed_lock);
-      if (retn != 0) {
+      if (err) {
         GST_ERROR_OBJECT(self, "NvBufferTransform Failed");
         /* TODO: Check if need to set ->stop_requested flag in error condition
          */
@@ -975,15 +969,15 @@ static gpointer consumer_thread(gpointer base) {
       gst_buffer_map(buffer, &outmap, GST_MAP_WRITE);
       NvBufSurface* surf = (NvBufSurface*)outmap.data;
 
-      retn = NvBufferTransform(consumerFrameInfo->fd,
-                               (gint)surf->surfaceList[0].bufferDesc,
-                               &self->transform_params);
+      err = NvBufferTransform(consumerFrameInfo->fd,
+                              (gint)surf->surfaceList[0].bufferDesc,
+                              &self->transform_params);
       g_mutex_lock(&self->manual_buffer_consumed_lock);
       g_cond_signal(&self->manual_buffer_consumed_cond);
       self->is_manual_buffer_consumed = TRUE;
       g_mutex_unlock(&self->manual_buffer_consumed_lock);
       surf->numFilled = 1;
-      if (retn != 0) {
+      if (err) {
         GST_ERROR_OBJECT(self, "NvBufferTransform Failed");
         /* TODO: Check if need to set ->stop_requested flag in error condition
          */
