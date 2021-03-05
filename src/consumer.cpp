@@ -33,6 +33,9 @@
 #include <EGLStream/NV/ImageNativeBuffer.h>
 #include <Error.h>
 
+GST_DEBUG_CATEGORY_STATIC(gst_nvmanualcamerasrc_consumer_debug);
+#define GST_CAT_DEFAULT gst_nvmanualcamerasrc_consumer_debug
+
 using namespace Argus;
 using namespace EGLStream;
 
@@ -48,6 +51,9 @@ bool Consumer::threadInitialize(GstNvManualCameraSrc* src) {
 }
 
 bool Consumer::threadExecute(GstNvManualCameraSrc* src) {
+  GST_DEBUG_CATEGORY_INIT(gst_nvmanualcamerasrc_consumer_debug,
+                          "nvmanualcamerasrc:consumer", 0,
+                          "nvmanualcamerasrc consumer");
   IEGLOutputStream* iStream = interface_cast<IEGLOutputStream>(m_stream);
   Size2D<uint32_t> streamSize(src->info.width, src->info.height);
   IFrameConsumer* iFrameConsumer = interface_cast<IFrameConsumer>(m_consumer);
