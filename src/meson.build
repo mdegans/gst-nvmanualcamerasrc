@@ -55,6 +55,7 @@ gstnvmanualcameasrc_src = [
   'consumer.cpp',
   'producer.cpp',
   'plugin.cpp',
+  'metadata.cpp',
 ]
 
 # set this when you `meson configure` with `-D b_lundef=true`

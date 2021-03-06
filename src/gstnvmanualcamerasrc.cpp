@@ -42,6 +42,7 @@
 #include "consumer.hpp"
 #include "gstnvmanualcamerasrc.hpp"
 #include "logging.hpp"
+#include "metadata.hpp"
 #include "producer.hpp"
 
 #include <Argus/Argus.h>
@@ -68,7 +69,7 @@ static const float MAX_GAIN = 16.0f;
 static const float MIN_DIGITAL_GAIN = 1.0f;
 static const float MAX_DIGITAL_GAIN = 256.0f;
 
-static const char* GST_NVMANUAL_MEMORY_TYPE = "nvarguscam";
+static const char* GST_NVMANUAL_MEMORY_TYPE = "nvmanualcam";
 
 GST_DEBUG_CATEGORY_STATIC(gst_nvmanualcamerasrc_debug);
 #define GST_CAT_DEFAULT gst_nvmanualcamerasrc_debug
@@ -100,17 +101,11 @@ enum {
   PROP_WHITE_BALANCE,
 };
 
-typedef struct AuxiliaryData {
-  gint64 frame_num;
-  gint64 timestamp;
-  Argus::CaptureMetadata* meta;
-} AuxData;
-
 struct _GstNVManualMemory {
   GstMemory mem;
   GstNvManualCameraSrcBuffer* nvcam_buf;
-  /* AuxData will be shared to App, on pad_probe */
-  AuxData auxData;
+  /* Metadata, if enabled */
+  std::unique_ptr<nvmanualcam::Metadata> metadata;
 };
 
 struct _GstNVManualMemoryAllocator {
@@ -206,6 +201,9 @@ static GstMemory* gst_nv_memory_allocator_alloc(GstAllocator* allocator,
   GstNvManualCameraSrc* self = (GstNvManualCameraSrc*)nvmm_allocator->owner;
 
   mem = g_slice_new0(GstNVManualMemory);
+  // FIXME(mdegans): research whether it's ok to construct a struct with a
+  //  unique_ptr and reset it like this.
+  mem->metadata.reset();
   nvbuf = g_slice_new0(GstNvManualCameraSrcBuffer);
 
   {
@@ -260,6 +258,9 @@ static void gst_nv_memory_allocator_free(GstAllocator* allocator,
   if (err) {
     GST_ERROR("NvBufferDestroy Failed");
   }
+
+  // FIXME(mdegans): research if this is ok or necessary
+  nv_mem->metadata.reset();
 
   g_slice_free(GstNvManualCameraSrcBuffer, nvbuf);
   g_slice_free(GstNVManualMemory, nv_mem);
@@ -504,12 +505,13 @@ static gpointer consumer_thread(gpointer base) {
         goto done;
       }
       nv_mem = (GstNVManualMemory*)mem;
-      nv_mem->auxData.frame_num = consumerFrameInfo->frameNum;
-      nv_mem->auxData.timestamp = consumerFrameInfo->frameTime;
-      nv_mem->auxData.meta = consumerFrameInfo->meta;
+      if (self->controls.meta_enabled) {
+        nv_mem->metadata = std::move(consumerFrameInfo->metadata);
+        consumerFrameInfo->metadata.reset();
+      }
       gst_mini_object_set_qdata(GST_MINI_OBJECT_CAST(buffer),
                                 gst_buffer_metadata_quark,
-                                &((GstNVManualMemory*)mem)->auxData, nullptr);
+                                &((GstNVManualMemory*)mem)->metadata, nullptr);
 
       err =
           NvBufferTransform(consumerFrameInfo->fd, nv_mem->nvcam_buf->dmabuf_fd,

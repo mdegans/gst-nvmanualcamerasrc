@@ -31,6 +31,7 @@
 
 #include "gstnvdsbufferpool.h"
 #include "gstnvmanualcamera_utils.h"
+#include "metadata.hpp"
 #include "nvbuf_utils.h"
 #include "nvbufsurface.h"
 
@@ -39,6 +40,8 @@
 #include <gst/base/gstbasesrc.h>
 #include <gst/gst.h>
 #include <gst/video/video.h>
+
+#include <memory>
 
 G_BEGIN_DECLS
 
@@ -120,7 +123,7 @@ typedef struct NvManualFrameInfo {
   gint fd;
   guint64 frameNum;
   guint64 frameTime;
-  Argus::CaptureMetadata* meta;  // Argus::CaptureMetadata
+  std::unique_ptr<nvmanualcam::Metadata> metadata;
 } NvManualFrameInfo;
 
 struct _GstNvManualCameraSrc {

@@ -28,6 +28,7 @@
 
 #include "consumer.hpp"
 #include "logging.hpp"
+#include "metadata.hpp"
 
 #include <EGLStream/EGLStream.h>
 #include <EGLStream/NV/ImageNativeBuffer.h>
@@ -302,7 +303,6 @@ bool Consumer::threadExecute(GstNvManualCameraSrc* src) {
     // Attach capture metadata to frameInfo
     // TODO(mdegans): research gstreamer frame level metadata to see if there is
     //  a better way to do this.
-    src->frameInfo->meta = nullptr;
     if (src->controls.meta_enabled) {
       auto iArgusCaptureMetadata =
           Argus::interface_cast<IArgusCaptureMetadata>(frame);
@@ -314,7 +314,11 @@ bool Consumer::threadExecute(GstNvManualCameraSrc* src) {
       if (!meta) {
         ORIGINATE_ERROR("Could not get Argus::CaptureMetadata");
       }
-      src->frameInfo->meta = meta;
+      auto metadata = nvmanualcam::Metadata::create(meta);
+      if (metadata) {
+        src->frameInfo->metadata = std::make_unique<nvmanualcam::Metadata>(
+            std::move(metadata.value()));
+      }
     }
 
     g_mutex_lock(&src->manual_buffers_queue_lock);
