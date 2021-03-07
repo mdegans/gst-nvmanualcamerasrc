@@ -314,11 +314,7 @@ bool Consumer::threadExecute(GstNvManualCameraSrc* src) {
       if (!meta) {
         ORIGINATE_ERROR("Could not get Argus::CaptureMetadata");
       }
-      auto metadata = nvmanualcam::Metadata::create(meta);
-      if (metadata) {
-        src->frameInfo->metadata = std::make_unique<nvmanualcam::Metadata>(
-            std::move(metadata.value()));
-      }
+      src->frameInfo->metadata = nvmanualcam::Metadata::create(meta);
     }
 
     g_mutex_lock(&src->manual_buffers_queue_lock);

@@ -25,6 +25,7 @@
 #include <Argus/Argus.h>
 
 #include <experimental/optional>
+#include <memory>
 
 namespace nvmanualcam {
 
@@ -41,14 +42,15 @@ class Metadata {
   // https://stackoverflow.com/a/38962230/11049585
 
   /**
-   * @brief Create new Metadata if possible.
+   * @brief Create new Metadata if possible. Safest way to construct this since
+   * it checks for null and whether it has the correct interface.
    *
    * @param meta directly from libargus
    *
-   * @return Metadata on success, nullopt on failure
+   * @return Metadata on success, nullptr on failure
    */
-  static std::experimental::optional<Metadata> create(
-      Argus::CaptureMetadata* meta);
+  static std::unique_ptr<Metadata> create(Argus::CaptureMetadata* meta);
+  Metadata(Argus::ICaptureMetadata* imeta);
   Metadata(Metadata& other) = default;
   Metadata(Metadata&& other) = default;
   virtual ~Metadata() = default;
@@ -279,8 +281,6 @@ class Metadata {
   virtual std::experimental::optional<RGBCurves> getToneMapCurves() const;
 
  private:
-  Metadata(Argus::ICaptureMetadata* imeta);
-
   const bool aeLocked_;
   std::experimental::optional<std::vector<Argus::AcRegion>> aeRegions_;
   const Argus::AeState aeState_;

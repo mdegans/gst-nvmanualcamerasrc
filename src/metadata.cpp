@@ -33,21 +33,21 @@ using std::experimental::optional;
 
 namespace nvmanualcam {
 
-optional<Metadata> Metadata::create(Argus::CaptureMetadata* meta) {
+std::unique_ptr<Metadata> Metadata::create(Argus::CaptureMetadata* meta) {
   // It is safe to call this multiple times. It checks if the category is NULL.
   GST_DEBUG_CATEGORY_INIT(gst_nvmanualcamerasrc_metadata_debug,
                           "nvmanualcamerasrc:metadata", 0,
                           "nvmanualcamerasrc metadata");
   if (!meta) {
     GST_WARNING("Could not create Metadata.");
-    return nullopt;
+    return nullptr;
   }
   auto imeta = Argus::interface_cast<Argus::ICaptureMetadata>(meta);
   if (!imeta) {
     GST_WARNING("Could not get ICaptureMetadata interface");
-    return nullopt;
+    return nullptr;
   }
-  return Metadata(imeta);
+  return std::make_unique<Metadata>(imeta);
 }
 
 Metadata::Metadata(Argus::ICaptureMetadata* imeta)
@@ -85,6 +85,8 @@ Metadata::Metadata(Argus::ICaptureMetadata* imeta)
       toneMapCurveG_(nullopt),
       toneMapCurveB_(nullopt),
       toneMapCurveEnabled_(imeta->getToneMapCurveEnabled()) {
+  assert(imeta);
+
   std::vector<Argus::AcRegion> aeRegions;
   if (Argus::Status::STATUS_OK == imeta->getAeRegions(&aeRegions)) {
     aeRegions_ = aeRegions;
