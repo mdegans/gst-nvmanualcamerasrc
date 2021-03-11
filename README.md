@@ -29,18 +29,7 @@ sudo apt-get install nvidia-l4t-jetson-multimedia-api
 
 ## Building
 
-Run the following commands to build and install "libgstnvmanualcamerasrc.so":
-
-using Gnu Make (`make`)
-
-```
-make
-(sudo) make install
-```
-(or)
-```
-DEST_DIR=<dir> (sudo) make install
-```
+Run the following commands to build and install `nvmanualcamerasrc`:
 
 using Meson and Ninja
 
@@ -50,6 +39,3 @@ cd builddir
 ninja
 (sudo) ninja install
 ```
-
-  Note: "sudo make install" will copy library "libgstnvmanualcamerasrc.so"
-  into "/usr/lib/aarch64-linux-gnu/gstreamer-1.0" directory.
