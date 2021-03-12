@@ -92,7 +92,7 @@ libgstnvmanualcamerameta = library('gstnvmanualcamerameta',
 gstnvmanualcamerameta_dep = declare_dependency(
   compile_args: gstnvmanualcamera_metadata_cflags,
   dependencies: gstnvmanualcamera_metadata_deps,
-  include_directories: gstnvmanualcamerasrc_public_incdir,
+  include_directories: [gstnvmanualcamerasrc_incdirs, mmapi_incdirs],
   link_with: libgstnvmanualcamerameta,
   version: meson.project_version(),
   variables: gstnvmanualcamerameta_variables,
