@@ -104,8 +104,6 @@ enum {
 struct _GstNVManualMemory {
   GstMemory mem;
   GstNvManualCameraSrcBuffer* nvcam_buf;
-  /* Metadata, if enabled */
-  std::unique_ptr<nvmanualcam::Metadata> metadata;
 };
 
 struct _GstNVManualMemoryAllocator {
@@ -203,7 +201,6 @@ static GstMemory* gst_nv_memory_allocator_alloc(GstAllocator* allocator,
   mem = g_slice_new0(GstNVManualMemory);
   // FIXME(mdegans): research whether it's ok to construct a struct with a
   //  unique_ptr and reset it like this.
-  mem->metadata.reset();
   nvbuf = g_slice_new0(GstNvManualCameraSrcBuffer);
 
   {
@@ -258,9 +255,6 @@ static void gst_nv_memory_allocator_free(GstAllocator* allocator,
   if (err) {
     GST_ERROR("NvBufferDestroy Failed");
   }
-
-  // FIXME(mdegans): research if this is ok or necessary
-  nv_mem->metadata.reset();
 
   g_slice_free(GstNvManualCameraSrcBuffer, nvbuf);
   g_slice_free(GstNVManualMemory, nv_mem);
@@ -468,8 +462,6 @@ static gpointer consumer_thread(gpointer base) {
   NvManualFrameInfo* consumerFrameInfo;
   GstFlowReturn ret;
   GstNVManualMemory* nv_mem = nullptr;
-  static GQuark gst_buffer_metadata_quark = 0;
-  gst_buffer_metadata_quark = g_quark_from_static_string("GstBufferMetaData");
 
   GstNvManualCameraSrc* self = (GstNvManualCameraSrc*)base;
 
@@ -506,13 +498,10 @@ static gpointer consumer_thread(gpointer base) {
       }
       nv_mem = (GstNVManualMemory*)mem;
       if (self->controls.meta_enabled) {
-        nv_mem->metadata = std::move(consumerFrameInfo->metadata);
-        consumerFrameInfo->metadata.reset();
+        g_assert(consumerFrameInfo->metadata);
+        nvmanualcam::attachMetadata(std::move(consumerFrameInfo->metadata),
+                                    buffer);
       }
-      gst_mini_object_set_qdata(GST_MINI_OBJECT_CAST(buffer),
-                                gst_buffer_metadata_quark,
-                                &((GstNVManualMemory*)mem)->metadata, nullptr);
-
       err =
           NvBufferTransform(consumerFrameInfo->fd, nv_mem->nvcam_buf->dmabuf_fd,
                             &self->transform_params);
@@ -565,7 +554,7 @@ done:
                    self->stop_requested);
   if (buffer) {
     gst_mini_object_set_qdata(GST_MINI_OBJECT_CAST(buffer),
-                              gst_buffer_metadata_quark, nullptr, nullptr);
+                              nvmanualcam::Metadata::quark(), nullptr, nullptr);
   }
   return nullptr;
 }

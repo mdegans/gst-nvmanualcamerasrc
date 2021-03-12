@@ -24,42 +24,125 @@
 
 #include <Argus/Argus.h>
 
+#ifdef HAS_GSTREAMER
+#include <gmodule.h>
+#include <gst/gst.h>
+#endif
+
 #include <experimental/optional>
 #include <memory>
+#ifdef HAS_BOOST_JSON
+#include <string>
+#endif
 
 namespace nvmanualcam {
 
-/** type representing RGB curves */
+/** type representing RGB curves in R G B order. */
 using RGBCurves =
     std::tuple<std::vector<float>, std::vector<float>, std::vector<float>>;
 
 /**
- * @brief More or less a copy of Argus::ICaptureMetadata with minor changes.
+ * @brief More or less a copy of Argus::ICaptureMetadata with some enhancements.
+ *
+ * tl;dr:
+ * * Use the `create` or `steal` methods to create unique_ptr<Metadata> from
+ * various common sources for which construction can fail.
+ * * Use the constructors directly for various sources that, except noted,
+ * cannot fail and make_unique<Metadata>(...) to create a unique_ptr from those
+ * as usual.
+ * * Use `nvmanualcam::attachMetadata()` to *move* metadata into a buffer and
+ * `Metadata::steal` to *move* Metadata out of a GstBuffer* or GstPadProbeInfo*.
  */
 class Metadata {
  public:
-  // pattern from:
-  // https://stackoverflow.com/a/38962230/11049585
-
   /**
-   * @brief Create new Metadata if possible. Safest way to construct this since
-   * it checks for null and whether it has the correct interface.
+   * @brief Create unique Metadata from Argus metadata. Will attempt to copy all
+   * data from any interfaces available.
    *
    * @param meta directly from libargus
    *
-   * @return Metadata on success, nullptr on failure
+   * @return Unique Metadata on success, nullptr on failure
    */
   static std::unique_ptr<Metadata> create(Argus::CaptureMetadata* meta);
+#ifdef HAS_GSTREAMER
+  /**
+   * @brief Take ownership of metadata in a GstBuffer attached to
+   * GstPadProbeInfo.
+   *
+   * After this is called. The GstBuffer will no longer have the metadata unless
+   * it, or a copy, is added back (eg. with attachMetadata).
+   *
+   * @param info eg. from a pad probe of GST_PAD_PROBE_TYPE_BUFFER type
+   *
+   * @return Unique Metadata on success, nullptr on failure
+   */
+  static std::unique_ptr<Metadata> steal(GstPadProbeInfo* info);
+  /**
+   * @brief Take ownership of metadata attached to a GstBuffer.
+   *
+   * After this is called. The GstBuffer will no longer have the metadata unless
+   * it, or a copy, is added back (eg. with attachMetadata).
+   *
+   * @param buf a GstBuffer
+   *
+   * @return Unique Metadata on success, nullptr on failure
+   */
+  static std::unique_ptr<Metadata> steal(GstBuffer* buf);
+#endif
+#ifdef HAS_BOOST_JSON
+  /**
+   * @brief Create unique Metadata from a json string.
+   *
+   * @param json in a json string
+   * @return Unique Metadata on success, nullptr on failure
+   */
+  static std::unique_ptr<Metadata> create(std::string json);
+#endif  // HAS_BOOST_JSON
+#ifdef HAS_GSTREAMER
+  /**
+   * @brief Returns the quark associated with this type of metadata. Used to
+   * identify this kind of metadata when attached to a buffer.
+   *
+   * NOTE: A GQuark is a value in a bidirectional, global, unique mapping
+   * between c_str and unique int. Think model number for metadata.
+   *
+   * @return GQuark unique to this metadata
+   */
+  static GQuark quark();
+#endif
+  /**
+   * @brief Construct a new Metadata object from an valid Argus metadata
+   * ICaptureMetadata interface.
+   *
+   * This assumes you've already ensured that it's valid or terrible things
+   * could happen. Preferably, use one of the `create` methods unless you have a
+   * very good reason.
+   *
+   * @param imeta Argus::ICaptureMetadata interface.
+   */
   Metadata(Argus::ICaptureMetadata* imeta);
+  /**
+   * @brief Construct a new Metadata object from another Metadata.
+   *
+   * @param other Metadata
+   */
   Metadata(Metadata& other) = default;
+  /**
+   * @brief Move constructor from another Metadata object.
+   *
+   * @param other Metadata
+   */
   Metadata(Metadata&& other) = default;
   virtual ~Metadata() = default;
 
   Metadata& operator=(Metadata& other) = default;
   Metadata& operator=(Metadata&& other) = default;
 
+#ifdef HAS_BOOST_JSON
+  std::string to_json() const;
+#endif
+
   // TODO(mdegans)
-  //   std::string as_json();
   //   std::string as_proto();
   //   static std::experimental::optional<Metadata> create(
   //       std::string meta);
@@ -295,31 +378,42 @@ class Metadata {
       bayerHistogram_;
   std::experimental::optional<std::vector<Argus::Rectangle<uint32_t>>>
       bayerHistogramRegion_;
-  uint32_t captureId_;
-  uint32_t clientData_;
+  const uint32_t captureId_;
+  const uint32_t clientData_;
   std::experimental::optional<std::vector<float>> colorCorrectionMatrix_;
   const bool colorCorrectionMatrixEnabled_;
   const float colorSaturation_;
   const Argus::AeFlickerState flickerState_;
-  int32_t focuserPosition_;
-  uint64_t frameDuration_;
-  uint64_t frameReadoutTime_;
+  const int32_t focuserPosition_;
+  const uint64_t frameDuration_;
+  const uint64_t frameReadoutTime_;
   float ispDigitalGain_;
   std::experimental::optional<uint32_t> rbgHistogramBinCount_;
   std::experimental::optional<std::vector<Argus::RGBTuple<uint32_t>>>
       rgbHistogram_;
-  float sceneLux_;
-  float sensorAnalogGain_;
-  uint64_t sensorExposureTime_;
-  uint32_t sensorSensitivity_;
-  uint64_t sensorTimestamp_;
+  const float sceneLux_;
+  const float sensorAnalogGain_;
+  const uint64_t sensorExposureTime_;
+  const uint32_t sensorSensitivity_;
+  const uint64_t sensorTimestamp_;
   std::experimental::optional<std::vector<float>> sharpnessScore_;
   // TODO(mdegans): stream metadata
   std::experimental::optional<std::vector<float>> toneMapCurveR_;
   std::experimental::optional<std::vector<float>> toneMapCurveG_;
   std::experimental::optional<std::vector<float>> toneMapCurveB_;
-  bool toneMapCurveEnabled_;
+  const bool toneMapCurveEnabled_;
 };
+
+#ifdef HAS_GSTREAMER
+/**
+ * @brief *Move* metadata into a GstBuffer. The lifespan will then be tied to
+ * the GstBuffer. Use `Metadata::create` to *move* the metadata back.
+ *
+ * @param meta unique_ptr of Metadata. Use std::move(metadata) for this param.
+ * @param buffer a GstBuffer to attach it to
+ */
+void attachMetadata(std::unique_ptr<Metadata>&& meta, GstBuffer* buffer);
+#endif  // HAS_GSTREAMER
 
 }  // namespace nvmanualcam
 

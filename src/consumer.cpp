@@ -81,8 +81,9 @@ bool Consumer::threadExecute(GstNvManualCameraSrc* src) {
   Range<uint64_t> limitExposureTimeRange;
   l_iCaptureSession->repeat(l_captureRequest);
 
-  src->frameInfo = g_slice_new(NvManualFrameInfo);
+  src->frameInfo = g_slice_new0(NvManualFrameInfo);
   src->frameInfo->fd = -1;
+  src->frameInfo->metadata.reset();
   while (true) {
     UniqueObj<Frame> frame(iFrameConsumer->acquireFrame());
     if (src->stop_requested == TRUE) {

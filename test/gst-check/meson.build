@@ -18,44 +18,35 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 # DEALINGS IN THE SOFTWARE.
 
-# setup the project's global options
-project('gstnvmanualcamerasrc', ['cpp'],
-  version: run_command(
-    'head', '-n', '1', files('VERSION'),
-  ).stdout().strip(),
-  meson_version: '>= 0.56.0',
-  license: 'Proprietary',
-  default_options: [
-    'cpp_std=c++17',
-    'warning_level=2',  # -Wall, -Wextra
-    'werror=true',  # -Werror
-  ],
-)
+# this meson.build is for gst-check tests (mostly integration tests)
 
-# the c++ compiler object
-cc = meson.get_compiler('cpp')
+# a list of dicts describing tests
+tests = [
+  # {
+  #   'description': 'test metadata',
+  #   'filename': 'test_metadata',
+  #   'sources': ['test_metadata.cpp'],
+  #   'suites': ['fast', 'integration'],
+  # },
+]
 
-# split the project version
-proj_ver = meson.project_version().split('.')
-# version minus patch revision
-proj_ver_short = proj_ver[0] + '.' + proj_ver[1]
-proj_ver_major = proj_ver[0]
-proj_ver_minor = proj_ver[1]
-proj_ver_patch = proj_ver[2]
-# all of this is used by configure_file on gstnvmanualcamera_config_meson.h.in
-proj_description = 'nVidia MANUAL Camera Source (meson)'
-proj_url = 'https://github.com/mdegans/gst-nvmanualcamerasrc'
-binary_package = 'NvMANUALCameraSrc'
-origin = 'github'
-# change this if you fork this
+# check for check (outside the loop to avoid printing twice)
+gst_check_dep = dependency('gstreamer-check-1.0')
 
-# extra cflags:
-# add_project_arguments(
-#   '-fno-exceptions',
-#   language : 'cpp'
-# )
-
-subdir('include')
-subdir('src')
-subdir('test')
-
+# build and run tests (on ninja test)
+foreach t: tests
+  exe = executable(t['filename'], t['sources'],
+    dependencies: [gst_check_dep],
+    link_with: libgstnvmanualcamerameta,
+    include_directories: [gstnvmanualcamerasrc_incdir, mmapi_incdirs],
+  )
+  test(t['description'], exe,
+    is_parallel: false,
+    suite: t['suites'],
+    env: [
+      'GST_DEBUG=4',
+      'GST_PLUGIN_PATH=' + meson.current_build_dir() + '/../../src',
+      'GST_REGISTRY_UPDATE=yes',
+    ],
+  )
+endforeach

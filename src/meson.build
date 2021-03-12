@@ -32,7 +32,7 @@ mmapi_incdirs = [
 ]
 
 # a list of our dependencies
-gstnvmanualcamearsrc_deps = [
+gstnvmanualcamerasrc_deps = [
   gst_dep,
   dependency('gstreamer-base-1.0'),
   dependency('gstreamer-video-1.0'),
@@ -47,29 +47,56 @@ gstnvmanualcamearsrc_deps = [
   dependency('threads'),
 ]
 
+# our metadata source
+gstnvmanualcamera_metadata_src = [
+  'metadata.cpp',
+]
+
+# metadata cflags
+gstnvmanualcamera_metadata_cflags = []
+
+# metadata deps
+boost_json_dep = dependency('boost', modules: ['json'], required: false)
+if boost_json_dep.found()
+  gstnvmanualcamera_metadata_cflags += '-DHAS_BOOST_JSON'
+endif
+if gst_dep.found()
+  gstnvmanualcamera_metadata_cflags += '-DHAS_GSTREAMER'
+endif
+gstnvmanualcamera_metadata_deps = [
+  gst_dep,
+  boost_json_dep,
+]
+
+# metadata library target
+libgstnvmanualcamerameta = library(meson.project_name() + 'meta',
+  gstnvmanualcamera_metadata_src,
+  dependencies: gstnvmanualcamera_metadata_deps,
+  include_directories: [gstnvmanualcamerasrc_incdir, mmapi_incdirs],
+  install: true,
+  version: meson.project_version(),
+  cpp_args: gstnvmanualcamera_metadata_cflags,
+)
+
 # a list of source files (globbing is verboten!)
-gstnvmanualcameasrc_src = [
+gstnvmanualcamerasrc_src = [
   'gstnvmanualcamera_utils.cpp',
   'gstnvmanualcamerasrc.cpp',
   'stoppable_thread.cpp',
   'consumer.cpp',
   'producer.cpp',
   'plugin.cpp',
-  'metadata.cpp',
 ]
 
 # set this when you `meson configure` with `-D b_lundef=true`
 # ldflags = ['-Wl,--no-undefined']
 
 # our library target
-libgstnvmanualcameasrc = library(meson.project_name(), gstnvmanualcameasrc_src,
-  dependencies: gstnvmanualcamearsrc_deps,
-  include_directories: [
-    gstnvmanualcamerasrc_incdir,
-    mmapi_incdirs,
-  ],
+libgstnvmanualcamerasrc = library(meson.project_name(), gstnvmanualcamerasrc_src,
+  dependencies: gstnvmanualcamerasrc_deps,
+  link_with: libgstnvmanualcamerameta,
+  include_directories: [gstnvmanualcamerasrc_incdir, mmapi_incdirs],
   install: true,
   install_dir: gst_install_dir,
-  cpp_args: gstnvmanualcamerasrc_cflags,
-#  link_args: ldflags,
+  cpp_args: [gstnvmanualcamerasrc_cflags, gstnvmanualcamera_metadata_cflags],
 )

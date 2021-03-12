@@ -18,44 +18,6 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 # DEALINGS IN THE SOFTWARE.
 
-# setup the project's global options
-project('gstnvmanualcamerasrc', ['cpp'],
-  version: run_command(
-    'head', '-n', '1', files('VERSION'),
-  ).stdout().strip(),
-  meson_version: '>= 0.56.0',
-  license: 'Proprietary',
-  default_options: [
-    'cpp_std=c++17',
-    'warning_level=2',  # -Wall, -Wextra
-    'werror=true',  # -Werror
-  ],
-)
-
-# the c++ compiler object
-cc = meson.get_compiler('cpp')
-
-# split the project version
-proj_ver = meson.project_version().split('.')
-# version minus patch revision
-proj_ver_short = proj_ver[0] + '.' + proj_ver[1]
-proj_ver_major = proj_ver[0]
-proj_ver_minor = proj_ver[1]
-proj_ver_patch = proj_ver[2]
-# all of this is used by configure_file on gstnvmanualcamera_config_meson.h.in
-proj_description = 'nVidia MANUAL Camera Source (meson)'
-proj_url = 'https://github.com/mdegans/gst-nvmanualcamerasrc'
-binary_package = 'NvMANUALCameraSrc'
-origin = 'github'
-# change this if you fork this
-
-# extra cflags:
-# add_project_arguments(
-#   '-fno-exceptions',
-#   language : 'cpp'
-# )
-
-subdir('include')
-subdir('src')
-subdir('test')
-
+subdir('googletest')
+subdir('gst-check')
+subdir('exitcode')
