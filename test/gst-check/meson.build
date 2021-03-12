@@ -38,14 +38,14 @@ foreach t: tests
   exe = executable(t['filename'], t['sources'],
     dependencies: [gst_check_dep],
     link_with: libgstnvmanualcamerameta,
-    include_directories: [gstnvmanualcamerasrc_incdir, mmapi_incdirs],
+    include_directories: [gstnvmanualcamerasrc_incdirs, mmapi_incdirs],
   )
   test(t['description'], exe,
     is_parallel: false,
     suite: t['suites'],
     env: [
       'GST_DEBUG=4',
-      'GST_PLUGIN_PATH=' + meson.current_build_dir() + '/../../src',
+      'GST_PLUGIN_PATH=' + libgstnvmanualcamerasrc_dir,
       'GST_REGISTRY_UPDATE=yes',
     ],
   )

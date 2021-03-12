@@ -41,6 +41,15 @@ gstnvmanualcamera_config_meson_h = configure_file(
 
 # this tells our config.h to use our completed template
 gstnvmanualcamerasrc_cflags = ['-DMESON']
+gstnvmanualcamerasrc_public_cflags = []
 
 # a variable pointing to this dir
 gstnvmanualcamerasrc_incdir = include_directories('.')
+gstnvmanualcamerasrc_public_incdir = include_directories('public')
+gstnvmanualcamerasrc_incdirs = [
+  gstnvmanualcamerasrc_incdir,
+  gstnvmanualcamerasrc_public_incdir,
+]
+
+# headers to install
+subdir('public')

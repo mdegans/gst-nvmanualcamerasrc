@@ -64,18 +64,37 @@ if gst_dep.found()
   gstnvmanualcamera_metadata_cflags += '-DHAS_GSTREAMER'
 endif
 gstnvmanualcamera_metadata_deps = [
+  cc.find_library('nvargus', dirs: lib_install_dir),
   gst_dep,
   boost_json_dep,
 ]
 
 # metadata library target
-libgstnvmanualcamerameta = library(meson.project_name() + 'meta',
+libgstnvmanualcamerameta = library('gstnvmanualcamerameta',
   gstnvmanualcamera_metadata_src,
   dependencies: gstnvmanualcamera_metadata_deps,
-  include_directories: [gstnvmanualcamerasrc_incdir, mmapi_incdirs],
+  include_directories: [gstnvmanualcamerasrc_incdirs, mmapi_incdirs],
   install: true,
   version: meson.project_version(),
   cpp_args: gstnvmanualcamera_metadata_cflags,
+)
+
+# a metadata dependency for use in subprojects
+gstnvmanualcamerameta_dep = declare_dependency(
+  compile_args: gstnvmanualcamera_metadata_cflags,
+  dependencies: gstnvmanualcamera_metadata_deps,
+  include_directories: gstnvmanualcamerasrc_public_incdir,
+  link_with: libgstnvmanualcamerameta,
+  version: meson.project_version(),
+)
+
+# a pkg-config file to find the metadata library
+pkg = import('pkgconfig')
+pkg.generate(libgstnvmanualcamerameta,
+  description: 'Metadata library for `nvmanualcamerasrc` Metadata.',
+  extra_cflags: gstnvmanualcamera_metadata_cflags,
+  libraries: gstnvmanualcamera_metadata_deps,
+  subdirs: meson.project_name(),  # $PREFIX/include/$PROJECT_NAME
 )
 
 # a list of source files (globbing is verboten!)
@@ -95,8 +114,11 @@ gstnvmanualcamerasrc_src = [
 libgstnvmanualcamerasrc = library(meson.project_name(), gstnvmanualcamerasrc_src,
   dependencies: gstnvmanualcamerasrc_deps,
   link_with: libgstnvmanualcamerameta,
-  include_directories: [gstnvmanualcamerasrc_incdir, mmapi_incdirs],
+  include_directories: [gstnvmanualcamerasrc_incdirs, mmapi_incdirs],
   install: true,
   install_dir: gst_install_dir,
   cpp_args: [gstnvmanualcamerasrc_cflags, gstnvmanualcamera_metadata_cflags],
 )
+
+# useful to point to the folder including the plugin
+libgstnvmanualcamerasrc_dir = meson.current_build_dir()

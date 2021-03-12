@@ -35,7 +35,7 @@ foreach t: tests
   exe = executable(t['filename'], t['sources'],
     dependencies: [dependency('gstreamer-1.0')],
     link_with: [libgstnvmanualcamerasrc, libgstnvmanualcamerameta],
-    include_directories: [gstnvmanualcamerasrc_incdir, mmapi_incdirs],
+    include_directories: [gstnvmanualcamerasrc_incdirs, mmapi_incdirs],
     cpp_args: [
       '-DHAS_GSTREAMER',
       '-DTEST_NAME="' + t['filename'] + '"',
@@ -53,7 +53,7 @@ foreach t: tests
     timeout: 300,  # seconds
     env: [
       'GST_DEBUG=4',
-      'GST_PLUGIN_PATH=' + meson.current_build_dir() / '..' / '..' / 'src',
+      'GST_PLUGIN_PATH=' + libgstnvmanualcamerasrc_dir,
       'GST_REGISTRY_UPDATE=yes',
     ],
   )

@@ -59,7 +59,7 @@ foreach t: tests
   exe = executable(t['filename'], t['sources'],
     dependencies: [gtest_dep],
     link_with: [libgstnvmanualcamerasrc, libgstnvmanualcamerameta],
-    include_directories: [libgstnvmanualcamerasrc_incdir, mmapi_incdirs],
+    include_directories: [libgstnvmanualcamerasrc_incdirs, mmapi_incdirs],
   )
   # skip running test if it's an interactive one
   if 'interactive' in t['suites']
@@ -72,7 +72,7 @@ foreach t: tests
     suite: t['suites'],
     env: [
       'GST_DEBUG=4',
-      'GST_PLUGIN_PATH=' + meson.current_build_dir() + '/../../src',
+      'GST_PLUGIN_PATH=' + libgstnvmanualcamerasrc_dir,
       'GST_REGISTRY_UPDATE=yes',
     ],
   )
