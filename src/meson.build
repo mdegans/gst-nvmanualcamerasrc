@@ -69,6 +69,15 @@ gstnvmanualcamera_metadata_deps = [
   boost_json_dep,
 ]
 
+# useful to point to the folder including the plugin
+libgstnvmanualcamerasrc_dir = meson.current_build_dir()
+
+# variables for use with dependency.get_variable(..)
+gstnvmanualcamerameta_variables = [
+  'pluginsdir_uninstalled=' + libgstnvmanualcamerasrc_dir,
+  'pluginsdir=' + gst_install_dir,
+]
+
 # metadata library target
 libgstnvmanualcamerameta = library('gstnvmanualcamerameta',
   gstnvmanualcamera_metadata_src,
@@ -86,6 +95,7 @@ gstnvmanualcamerameta_dep = declare_dependency(
   include_directories: gstnvmanualcamerasrc_public_incdir,
   link_with: libgstnvmanualcamerameta,
   version: meson.project_version(),
+  variables: gstnvmanualcamerameta_variables,
 )
 
 # a pkg-config file to find the metadata library
@@ -95,6 +105,7 @@ pkg.generate(libgstnvmanualcamerameta,
   extra_cflags: gstnvmanualcamera_metadata_cflags,
   libraries: gstnvmanualcamera_metadata_deps,
   subdirs: meson.project_name(),  # $PREFIX/include/$PROJECT_NAME
+  variables: gstnvmanualcamerameta_variables,
 )
 
 # a list of source files (globbing is verboten!)
@@ -119,6 +130,3 @@ libgstnvmanualcamerasrc = library(meson.project_name(), gstnvmanualcamerasrc_src
   install_dir: gst_install_dir,
   cpp_args: [gstnvmanualcamerasrc_cflags, gstnvmanualcamera_metadata_cflags],
 )
-
-# useful to point to the folder including the plugin
-libgstnvmanualcamerasrc_dir = meson.current_build_dir()
