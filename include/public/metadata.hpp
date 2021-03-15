@@ -46,7 +46,8 @@ using RGBCurves =
  *
  * tl;dr:
  * * Use the `create` or `steal` methods to create unique_ptr<Metadata> from
- * various common sources for which construction can fail.
+ * various common sources for which construction can fail. Create copies,
+ * steal moves.
  * * Use the constructors directly for various sources that, except noted,
  * cannot fail and make_unique<Metadata>(...) to create a unique_ptr from those
  * as usual.
@@ -65,6 +66,22 @@ class Metadata {
    */
   static std::unique_ptr<Metadata> create(Argus::CaptureMetadata* meta);
 #ifdef HAS_GSTREAMER
+  /**
+   * @brief Copy metadata in a GstBuffer attached to GstPadProbeInfo.
+   *
+   * @param info eg. from a pad probe of GST_PAD_PROBE_TYPE_BUFFER type
+   *
+   * @return Unique Metadata on success, nullptr on failure
+   */
+  static std::unique_ptr<Metadata> create(GstPadProbeInfo* info);
+  /**
+   * @brief Copy metadata attached to a GstBuffer.
+   *
+   * @param buf a GstBuffer
+   *
+   * @return Unique Metadata on success, nullptr on failure
+   */
+  static std::unique_ptr<Metadata> create(GstBuffer* buf);
   /**
    * @brief Take ownership of metadata in a GstBuffer attached to
    * GstPadProbeInfo.

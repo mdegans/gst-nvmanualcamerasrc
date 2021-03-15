@@ -99,6 +99,41 @@ std::unique_ptr<Metadata> Metadata::create(Argus::CaptureMetadata* meta) {
 }
 
 #ifdef HAS_GSTREAMER
+std::unique_ptr<Metadata> Metadata::create(GstPadProbeInfo* info) {
+  GST_DEBUG_CATEGORY_INIT(gst_nvmanualcamerasrc_metadata_debug,
+                          "nvmanualcamerasrc:metadata", 0,
+                          "nvmanualcamerasrc metadata");
+  LOG("Copying Metadata from GstPadProbeInfo.");
+  GstBuffer* buf = nullptr;
+
+  buf = gst_pad_probe_info_get_buffer(info);  // [transfer: none]
+  if (!buf) {
+    WARNING("Unable to get GstBuffer from GstPadProbeInfo.");
+    return nullptr;
+  }
+
+  return Metadata::create(buf);
+}
+
+std::unique_ptr<Metadata> Metadata::create(GstBuffer* buf) {
+  GST_DEBUG_CATEGORY_INIT(gst_nvmanualcamerasrc_metadata_debug,
+                          "nvmanualcamerasrc:metadata", 0,
+                          "nvmanualcamerasrc metadata");
+  LOG("Copying Metadata from GstBuffer.");
+  Metadata* raw = nullptr;
+
+  // this does not take ownership, in contrast with `...steal_qdata`
+  raw = (Metadata*)gst_mini_object_get_qdata(GST_MINI_OBJECT_CAST(buf),
+                                             quark());  // [transfer: none]
+
+  if (!raw) {
+    WARNING("Metadata not attached to buffer.");
+    return nullptr;
+  }
+
+  return std::make_unique<Metadata>(*raw);
+}
+
 std::unique_ptr<Metadata> Metadata::steal(GstPadProbeInfo* info) {
   GST_DEBUG_CATEGORY_INIT(gst_nvmanualcamerasrc_metadata_debug,
                           "nvmanualcamerasrc:metadata", 0,

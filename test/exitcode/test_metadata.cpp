@@ -21,25 +21,34 @@ GstPadProbeReturn metadata_probe(GstPad* pad,
                                  gpointer user_data) {
   (void)pad;
   (void)user_data;
-  auto meta = nvmanualcam::Metadata::steal(info);
+  auto metaa = nvmanualcam::Metadata::create(info);
+  auto metab = nvmanualcam::Metadata::steal(info);
 
-  if (!meta) {
-    GST_ERROR("no metadata found");
+  if (!metaa) {
+    GST_ERROR("no copied metadata found");
+    return GST_PAD_PROBE_REMOVE;
+  }
+
+  if (!metab) {
+    GST_ERROR("no moved metadata found");
     return GST_PAD_PROBE_REMOVE;
   }
   GST_INFO("got metadata from buffer (%d)", ++meta_counter);
 
+  // sanity test for metaa and metab
+  assert(metaa->getSceneLux() == metab->getSceneLux());  // a value matches
+
 #ifdef HAS_BOOST_JSON
-  auto json = meta->as_json();
+  auto json = metab->as_json();
   GST_INFO("json: %s", json.c_str());
 #endif
 
   // test gains
-  auto gains = meta->getAwbGains();
+  auto gains = metab->getAwbGains();
   GST_INFO("Bayer Gains: r:%.3f,gEven:%.3f,gOdd:%.3f,b:%.3f", gains.r(),
            gains.gEven(), gains.gOdd(), gains.b());
   // test sharpness scores
-  auto scores = meta->getSharpnessScore();
+  auto scores = metab->getSharpnessScore();
   if (scores) {
     std::stringstream ss;
     for (auto val : scores.value()) {
@@ -47,6 +56,9 @@ GstPadProbeReturn metadata_probe(GstPad* pad,
     }
     GST_INFO("Sharpness scores:%s", ss.str().c_str());
   }
+  // test scene lux
+  auto lux = metab->getSceneLux();
+  GST_INFO("Scene Lux: %.3f", lux);
 
   return GST_PAD_PROBE_OK;
 }
