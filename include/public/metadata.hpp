@@ -366,6 +366,7 @@ class Metadata {
    * @return time in nanoseconds
    */
   virtual uint64_t getSensorTimestamp() const { return sensorTimestamp_; }
+#ifdef JETPACK_45
   /**
    * @brief Get the sharpness score if available.
    *
@@ -375,6 +376,7 @@ class Metadata {
       const {
     return sharpnessScore_;
   }
+#endif  // JETPACK_45
   /**
    * @brief Get tone map curves if available.
    *
@@ -417,7 +419,9 @@ class Metadata {
   const uint64_t sensorExposureTime_;
   const uint32_t sensorSensitivity_;
   const uint64_t sensorTimestamp_;
+#ifdef JETPACK_45
   std::experimental::optional<std::vector<float>> sharpnessScore_;
+#endif  // JETPACK_45
   // TODO(mdegans): stream metadata
   std::experimental::optional<std::vector<float>> toneMapCurveR_;
   std::experimental::optional<std::vector<float>> toneMapCurveG_;

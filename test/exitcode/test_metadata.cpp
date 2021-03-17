@@ -47,6 +47,7 @@ GstPadProbeReturn metadata_probe(GstPad* pad,
   auto gains = metab->getAwbGains();
   GST_INFO("Bayer Gains: r:%.3f,gEven:%.3f,gOdd:%.3f,b:%.3f", gains.r(),
            gains.gEven(), gains.gOdd(), gains.b());
+#ifdef JETPACK_45
   // test sharpness scores
   auto scores = metab->getSharpnessScore();
   if (scores) {
@@ -56,6 +57,7 @@ GstPadProbeReturn metadata_probe(GstPad* pad,
     }
     GST_INFO("Sharpness scores:%s", ss.str().c_str());
   }
+#endif  // JETPACK_45
   // test scene lux
   auto lux = metab->getSceneLux();
   GST_INFO("Scene Lux: %.3f", lux);

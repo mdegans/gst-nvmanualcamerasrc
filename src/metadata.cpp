@@ -215,7 +215,9 @@ Metadata::Metadata(Argus::ICaptureMetadata* imeta)
       sensorExposureTime_(imeta->getSensorExposureTime()),
       sensorSensitivity_(imeta->getSensorSensitivity()),
       sensorTimestamp_(imeta->getSensorTimestamp()),
+#ifdef JETPACK_45
       sharpnessScore_(nullopt),
+#endif  // JETPACK_45
       toneMapCurveR_(nullopt),
       toneMapCurveG_(nullopt),
       toneMapCurveB_(nullopt),
@@ -283,12 +285,14 @@ Metadata::Metadata(Argus::ICaptureMetadata* imeta)
     LOG("RGB histogram not available.");
   }
 
+#ifdef JETPACK_45
   std::vector<float> sharpnessScore;
   if (Argus::Status::STATUS_OK == imeta->getSharpnessScore(&sharpnessScore)) {
     sharpnessScore_ = sharpnessScore;
   } else {
     LOG("Sharpness score not available.");
   }
+#endif  // JETPACK_45
 
   if (toneMapCurveEnabled_) {
     std::vector<float> toneMapCurve;
