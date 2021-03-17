@@ -284,6 +284,7 @@ class Metadata {
    * @return float value from -1.0 to 1.0
    */
   virtual float getColorSaturation() const { return colorSaturation_; }
+#ifdef JETPACK_45  // added without a note in the changelog!!!!
   /**
    * @brief Get the Flicker reduction mode (off, 50hz, 60hz)
    *
@@ -292,6 +293,7 @@ class Metadata {
   virtual Argus::AeFlickerState getFlickerState() const {
     return flickerState_;
   }
+#endif  // JETPACK_45
   /**
    * @brief Get the Focuser Position
    *
@@ -400,7 +402,9 @@ class Metadata {
   std::experimental::optional<std::vector<float>> colorCorrectionMatrix_;
   const bool colorCorrectionMatrixEnabled_;
   const float colorSaturation_;
+#ifdef JETPACK_45
   const Argus::AeFlickerState flickerState_;
+#endif  // JETPACK_45
   const int32_t focuserPosition_;
   const uint64_t frameDuration_;
   const uint64_t frameReadoutTime_;

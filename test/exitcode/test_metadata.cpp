@@ -105,7 +105,7 @@ int main(int argc, char** argv) {
   msg = gst_bus_timed_pop_filtered(
       bus, GST_CLOCK_TIME_NONE,
       (GstMessageType)(GST_MESSAGE_ERROR | GST_MESSAGE_EOS));
-  g_assert(msg);
+  g_assert(msg->type == GST_MESSAGE_EOS);
 
   g_assert(GST_STATE_CHANGE_FAILURE !=
            gst_element_set_state(pipe, GST_STATE_NULL));

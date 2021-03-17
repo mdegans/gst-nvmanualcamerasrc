@@ -201,7 +201,9 @@ Metadata::Metadata(Argus::ICaptureMetadata* imeta)
       colorCorrectionMatrix_(nullopt),
       colorCorrectionMatrixEnabled_(imeta->getColorCorrectionMatrixEnable()),
       colorSaturation_(imeta->getColorSaturation()),
+#ifdef JETPACK_45
       flickerState_(imeta->getFlickerState()),
+#endif  // JETPACK_45
       focuserPosition_(imeta->getFocuserPosition()),
       frameDuration_(imeta->getFrameDuration()),
       frameReadoutTime_(imeta->getFrameReadoutTime()),
