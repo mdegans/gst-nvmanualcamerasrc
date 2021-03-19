@@ -46,8 +46,10 @@ if argus_version == 'None'
   error('Argus not found')
 else
   if argus_version.version_compare('>=32.5')
-    message('JetPack 4.5 Detected. Enabling extra Metadata.')
+    message('JetPack >= 4.5 Detected. Enabling extra Metadata.')
     has_jetpack_45 = true
+  else
+    warning('JetPack >= 4.5 NOT Detected. Disabling extra Metadata.')
   endif
 endif
 
