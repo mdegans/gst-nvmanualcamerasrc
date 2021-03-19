@@ -23,7 +23,7 @@ project('gstnvmanualcamerasrc', ['cpp'],
   version: run_command(
     'head', '-n', '1', files('VERSION'),
   ).stdout().strip(),
-  meson_version: '>= 0.56.0',
+  meson_version: '>= 0.57.1',
   license: 'Proprietary',
   default_options: [
     'cpp_std=c++17',
@@ -34,6 +34,22 @@ project('gstnvmanualcamerasrc', ['cpp'],
 
 # the c++ compiler object
 cc = meson.get_compiler('cpp')
+
+# get argus version (actually detect the JetPack version, but that ends up
+# being more useful). It's used to define 'JETPACK_45'.
+pymod = import('python')
+python3 = pymod.find_installation('python3')
+argus_version = run_command(
+  python3, '-sSE', files('argus_version.py')).stdout().strip()
+has_jetpack_45 = false
+if argus_version == 'None'
+  error('Argus not found')
+else
+  if argus_version.version_compare('>=32.5')
+    message('JetPack 4.5 Detected. Enabling extra Metadata.')
+    has_jetpack_45 = true
+  endif
+endif
 
 # split the project version
 proj_ver = meson.project_version().split('.')
