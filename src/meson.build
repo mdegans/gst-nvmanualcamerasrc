@@ -63,6 +63,9 @@ endif
 if gst_dep.found()
   gstnvmanualcamera_metadata_cflags += '-DHAS_GSTREAMER'
 endif
+if get_option('jetpack_45')
+  gstnvmanualcamera_metadata_cflags += '-DJETPACK_45'
+endif
 gstnvmanualcamera_metadata_deps = [
   cc.find_library('nvargus', dirs: lib_install_dir),
   gst_dep,

@@ -1,0 +1,5 @@
+option('jetpack_45',
+  description: 'Has JetPack 4.5 or later',
+  type: 'boolean',
+  value: false,
+)

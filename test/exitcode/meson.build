@@ -37,7 +37,7 @@ foreach t: tests
     link_with: [libgstnvmanualcamerasrc, libgstnvmanualcamerameta],
     include_directories: [gstnvmanualcamerasrc_incdirs, mmapi_incdirs],
     cpp_args: [
-      '-DHAS_GSTREAMER',
+      gstnvmanualcamera_metadata_cflags,
       '-DTEST_NAME="' + t['filename'] + '"',
     ]
   )
