@@ -23,6 +23,7 @@
 #define AC5EBD7A_6EA4_46E9_980F_E6964D058DB4
 
 #include <Argus/Argus.h>
+#include <Argus/Ext/BayerSharpnessMap.h>
 
 #ifdef HAS_GSTREAMER
 #include <gmodule.h>
@@ -115,18 +116,6 @@ class Metadata {
    */
   static std::unique_ptr<Metadata> create(std::string json);
 #endif  // HAS_BOOST_JSON
-#ifdef HAS_GSTREAMER
-  /**
-   * @brief Returns the quark associated with this type of metadata. Used to
-   * identify this kind of metadata when attached to a buffer.
-   *
-   * NOTE: A GQuark is a value in a bidirectional, global, unique mapping
-   * between c_str and unique int. Think model number for metadata.
-   *
-   * @return GQuark unique to this metadata
-   */
-  static GQuark quark();
-#endif
   /**
    * @brief Construct a new Metadata object from an valid Argus metadata
    * ICaptureMetadata interface.
@@ -136,8 +125,10 @@ class Metadata {
    * very good reason.
    *
    * @param imeta Argus::ICaptureMetadata interface.
+   * @param iBayerSharpnesMap optional Argus::IBayerSharpnessMap interface.
    */
-  Metadata(Argus::ICaptureMetadata* imeta);
+  Metadata(Argus::ICaptureMetadata* imeta,
+           Argus::Ext::IBayerSharpnessMap* iBayerSharpnessMap = nullptr);
   /**
    * @brief Construct a new Metadata object from another Metadata.
    *
@@ -154,6 +145,19 @@ class Metadata {
 
   Metadata& operator=(Metadata& other) = default;
   Metadata& operator=(Metadata&& other) = default;
+
+#ifdef HAS_GSTREAMER
+  /**
+   * @brief Returns the quark associated with this type of metadata. Used to
+   * identify this kind of metadata when attached to a buffer.
+   *
+   * NOTE: A GQuark is a value in a bidirectional, global, unique mapping
+   * between c_str and unique int. Think model number for metadata.
+   *
+   * @return GQuark unique to this metadata
+   */
+  static GQuark quark();
+#endif
 
 #ifdef HAS_BOOST_JSON
   std::string to_json() const;
@@ -366,6 +370,31 @@ class Metadata {
    * @return time in nanoseconds
    */
   virtual uint64_t getSensorTimestamp() const { return sensorTimestamp_; }
+  /**
+   * @brief Get the Sharpness Values if enabled and available.
+   *
+   * @return optional Argus::Array2D<Argus::BayerTuple<float>>
+   */
+  virtual std::experimental::optional<Argus::Array2D<Argus::BayerTuple<float>>>
+  getSharpnessValues() const {
+    return sharpnessValues_;
+  }
+  virtual std::experimental::optional<Argus::Size2D<uint32_t>>
+  getSharpnessValuesBinCount() {
+    return sharpnessValuesBinCount_;
+  }
+  virtual std::experimental::optional<Argus::Size2D<uint32_t>>
+  getSharpnessValuesBinInterval() {
+    return sharpnessValuesBinInterval_;
+  }
+  virtual std::experimental::optional<Argus::Size2D<uint32_t>>
+  getSharpnessValuesBinSize() {
+    return sharpnessValuesBinSize_;
+  }
+  virtual std::experimental::optional<Argus::Point2D<uint32_t>>
+  getSharpnessValuesBinStart() {
+    return sharpnessValuesBinStart_;
+  }
 #ifdef JETPACK_45
   /**
    * @brief Get the sharpness score if available.
@@ -419,6 +448,14 @@ class Metadata {
   const uint64_t sensorExposureTime_;
   const uint32_t sensorSensitivity_;
   const uint64_t sensorTimestamp_;
+  std::experimental::optional<Argus::Array2D<Argus::BayerTuple<float>>>
+      sharpnessValues_;
+  std::experimental::optional<Argus::Size2D<uint32_t>> sharpnessValuesBinCount_;
+  std::experimental::optional<Argus::Size2D<uint32_t>>
+      sharpnessValuesBinInterval_;
+  std::experimental::optional<Argus::Size2D<uint32_t>> sharpnessValuesBinSize_;
+  std::experimental::optional<Argus::Point2D<uint32_t>>
+      sharpnessValuesBinStart_;
 #ifdef JETPACK_45
   std::experimental::optional<std::vector<float>> sharpnessScore_;
 #endif  // JETPACK_45

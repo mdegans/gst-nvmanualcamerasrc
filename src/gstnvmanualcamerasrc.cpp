@@ -89,6 +89,7 @@ enum {
   PROP_EXPOSURE_REAL,
   PROP_EXPOSURE_TIME,
   PROP_GAIN,
+  PROP_BAYER_SHARPNESS_MAP,
   PROP_METADATA,
   PROP_SATURATION,
   PROP_SENSOR_ID,
@@ -771,6 +772,14 @@ static void gst_nv_manual_camera_src_class_init(
           (GParamFlags)(G_PARAM_READWRITE | GST_PARAM_MUTABLE_READY)));
 
   g_object_class_install_property(
+      gobject_class, PROP_BAYER_SHARPNESS_MAP,
+      g_param_spec_boolean(
+          "bayer-sharpness-map", "Bayer Sharpness Map",
+          "Generate and attach Argus::IBayerSharpnessMap metadata.",
+          nvmanualcam::defaults::BAYER_SHARPNESS_MAP,
+          (GParamFlags)(G_PARAM_READWRITE | GST_PARAM_MUTABLE_READY)));
+
+  g_object_class_install_property(
       gobject_class, PROP_BUFAPI,
       g_param_spec_boolean(
           "bufapi-version", "Buffer API", "set to use new Buffer API",
@@ -809,6 +818,8 @@ static void gst_nv_manual_camera_src_init(GstNvManualCameraSrc* self) {
   self->controls.NoiseReductionStrength = nvmanualcam::defaults::TNR_STRENGTH;
   self->controls.NoiseReductionMode = nvmanualcam::defaults::TNR_MODE;
   self->controls.wbmode = nvmanualcam::defaults::WB_MODE;
+  self->controls.bayer_sharpness_map =
+      nvmanualcam::defaults::BAYER_SHARPNESS_MAP;
   self->controls.meta_enabled = nvmanualcam::defaults::METADATA;
   self->controls.saturation = nvmanualcam::defaults::SATURATION;
   self->controls.EdgeEnhancementStrength = nvmanualcam::defaults::EE_STRENGTH;
@@ -925,6 +936,9 @@ static void gst_nv_manual_camera_src_set_property(GObject* object,
       self->controls.AwbLock = g_value_get_boolean(value);
       self->awbLockPropSet = TRUE;
       break;
+    case PROP_BAYER_SHARPNESS_MAP:
+      self->controls.bayer_sharpness_map = g_value_get_boolean(value);
+      break;
     case PROP_METADATA:
       self->controls.meta_enabled = g_value_get_boolean(value);
       break;
@@ -1000,6 +1014,9 @@ static void gst_nv_manual_camera_src_get_property(GObject* object,
       break;
     case PROP_AWB_LOCK:
       g_value_set_boolean(value, self->controls.AwbLock);
+      break;
+    case PROP_BAYER_SHARPNESS_MAP:
+      g_value_set_boolean(value, self->controls.bayer_sharpness_map);
       break;
     case PROP_METADATA:
       g_value_set_boolean(value, self->controls.meta_enabled);
