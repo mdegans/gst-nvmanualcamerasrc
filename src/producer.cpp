@@ -32,6 +32,7 @@
 #include "logging.hpp"
 
 #include <Argus/Argus.h>
+#include <Argus/Ext/BayerSharpnessMap.h>
 #include <Error.h>
 
 #include <gst/gst.h>
@@ -137,6 +138,20 @@ bool producer(int32_t cameraIndex,
   if (!requestSourceSettings)
     ORIGINATE_ERROR("Failed to get request source settings");
   src->iRequestSourceSettings_ptr = requestSourceSettings;
+
+  if (src->controls.bayer_sharpness_map) {
+    if (!src->controls.meta_enabled) {
+      ORIGINATE_ERROR("`metadata` must be true to use `bayer-sharpness-map`");
+    }
+    GST_INFO("Enabling BayerSharpnessMap metadata.");
+    auto sharpMapSettings =
+        interface_cast<Ext::IBayerSharpnessMapSettings>(request);
+    if (!sharpMapSettings) {
+      ORIGINATE_ERROR(
+          "Failed to get Ext::IBayerSharpnessMapSettings interface.");
+    }
+    sharpMapSettings->setBayerSharpnessMapEnable(true);
+  }
 
   if (cameraMode != nvmanualcam::defaults::SENSOR_MODE_STATE &&
       static_cast<uint32_t>(cameraMode) >= modes.size())

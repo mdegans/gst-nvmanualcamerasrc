@@ -70,6 +70,7 @@ const auto TNR_MODE = NvManualCamNoiseReductionMode_Off;
 const auto WB_MODE = NvManualCamAwbMode_Auto;
 const bool AE_LOCK = false;
 const bool AWB_LOCK = false;
+const bool BAYER_SHARPNESS_MAP = false;
 const bool METADATA = true;
 const bool BUFAPI = false;
 const bool SILENT = false;
@@ -96,11 +97,12 @@ typedef struct _GstNvManualCameraSrcBuffer GstNvManualCameraSrcBuffer;
 typedef struct NvManualCamControls {
   NvManualCamAwbMode wbmode;
   float saturation;
-  float exposure_time;     // in frames
-  uint64_t exposure_real;  // in nanoseconds
-  float gain;              // min: 1, max: 16
-  float digital_gain;      // min 1, max: 256
-  gboolean meta_enabled;   // enable metadata generation
+  float exposure_time;           // in frames
+  uint64_t exposure_real;        // in nanoseconds
+  float gain;                    // min: 1, max: 16
+  float digital_gain;            // min 1, max: 256
+  gboolean meta_enabled;         // enable metadata generation
+  gboolean bayer_sharpness_map;  // enable BayerSharpnessMap metadata
   NvManualCamNoiseReductionMode NoiseReductionMode;
   NvManualCamEdgeEnhancementMode EdgeEnhancementMode;
   NvManualCamAeAntibandingMode AeAntibandingMode;

@@ -95,7 +95,8 @@ std::unique_ptr<Metadata> Metadata::create(Argus::CaptureMetadata* meta) {
     return nullptr;
   }
 
-  return std::make_unique<Metadata>(imeta);
+  return std::make_unique<Metadata>(
+      imeta, Argus::interface_cast<Argus::Ext::IBayerSharpnessMap>(meta));
 }
 
 #ifdef HAS_GSTREAMER
@@ -183,7 +184,8 @@ GQuark Metadata::quark() {
 }
 #endif  // HAS_GSTREAMER
 
-Metadata::Metadata(Argus::ICaptureMetadata* imeta)
+Metadata::Metadata(Argus::ICaptureMetadata* imeta,
+                   Argus::Ext::IBayerSharpnessMap* iBayerSharpnessMap)
     : aeLocked_(imeta->getAeLocked()),
       aeRegions_(nullopt),
       aeState_(imeta->getAeState()),
@@ -215,6 +217,11 @@ Metadata::Metadata(Argus::ICaptureMetadata* imeta)
       sensorExposureTime_(imeta->getSensorExposureTime()),
       sensorSensitivity_(imeta->getSensorSensitivity()),
       sensorTimestamp_(imeta->getSensorTimestamp()),
+      sharpnessValues_(nullopt),
+      sharpnessValuesBinCount_(nullopt),
+      sharpnessValuesBinInterval_(nullopt),
+      sharpnessValuesBinSize_(nullopt),
+      sharpnessValuesBinStart_(nullopt),
 #ifdef JETPACK_45
       sharpnessScore_(nullopt),
 #endif  // JETPACK_45
@@ -283,6 +290,25 @@ Metadata::Metadata(Argus::ICaptureMetadata* imeta)
     }
   } else {
     LOG("RGB histogram not available.");
+  }
+
+  if (iBayerSharpnessMap) {
+    Argus::Array2D<Argus::BayerTuple<float>> sharpnessValues;
+    if (Argus::Status::STATUS_OK ==
+        iBayerSharpnessMap->getSharpnessValues(&sharpnessValues)) {
+      sharpnessValues_ = sharpnessValues;
+    } else {
+      WARNING(
+          "IBayerSharpnessMap interface enabled but could not get sharpness "
+          "values.");
+    }
+
+    sharpnessValuesBinCount_ = iBayerSharpnessMap->getBinCount();
+    sharpnessValuesBinInterval_ = iBayerSharpnessMap->getBinInterval();
+    sharpnessValuesBinSize_ = iBayerSharpnessMap->getBinSize();
+    sharpnessValuesBinStart_ = iBayerSharpnessMap->getBinStart();
+  } else {
+    LOG("IBayerSharpnessMap not available.");
   }
 
 #ifdef JETPACK_45

@@ -56,11 +56,50 @@ GstPadProbeReturn metadata_probe(GstPad* pad,
       ss << val << ",";
     }
     GST_INFO("Sharpness scores:%s", ss.str().c_str());
+  } else {
+    GST_ERROR("Shapness scores not available.");
+    return GST_PAD_PROBE_REMOVE;
   }
 #endif  // JETPACK_45
   // test scene lux
   auto lux = metab->getSceneLux();
   GST_INFO("Scene Lux: %.3f", lux);
+
+  // test bayer-sharpness-map
+  auto svalues = metab->getSharpnessValues();
+  if (svalues) {
+    auto len = svalues.value().size().area();
+    GST_INFO("Sharpness values length:%d", len);
+    float sum;
+    for (const auto& val : svalues.value()) {
+      sum += val.r();
+      sum += val.gEven();
+      sum += val.gOdd();
+      sum += val.b();
+    }
+    // this gives *approximately* the same result as the above sharpness scores
+    // how exactly nvidia calculates theirs is a black box.
+    auto mean = sum * 1000.0f / static_cast<float>(len) * 4.0f;
+    GST_INFO("Sharpness values mean:%.3f", mean);
+    // NOTE: don't use value() in production code. It'll raise
+    // std::bad_optional_access if there is no value. Prefer checking like
+    // if (binCount) { auto foo = binCount.value(); ... } else { // useful err }
+    auto binCount = metab->getSharpnessValuesBinCount().value();
+    GST_INFO("Sharpness values bin count:width:%d,height:%d,area:%d",
+             binCount.width(), binCount.height(), binCount.area());
+    auto binInterval = metab->getSharpnessValuesBinInterval().value();
+    GST_INFO("Sharpness values bin interval:width:%d,height:%d,area:%d",
+             binInterval.width(), binInterval.height(), binInterval.area());
+    auto binSize = metab->getSharpnessValuesBinSize().value();
+    GST_INFO("Sharpness values bin size:width:%d,height:%d,area:%d",
+             binSize.width(), binSize.height(), binSize.area());
+    auto binStart = metab->getSharpnessValuesBinStart().value();
+    GST_INFO("Sharpness values bin start:x:%d,y:%d", binStart.x(),
+             binStart.y());
+  } else {
+    GST_ERROR("Could not get SharpnessValues. `bayer-sharpness-map` broken.");
+    return GST_PAD_PROBE_REMOVE;
+  }
 
   return GST_PAD_PROBE_OK;
 }
@@ -81,6 +120,7 @@ int main(int argc, char** argv) {
   g_assert(pipe);
   camera = gst_element_factory_make("nvmanualcamerasrc", "camera");
   g_assert(camera);
+  // change to "autovideosink" if you want to see the camera feed while testing.
   fakesink = gst_element_factory_make("fakesink", "fakesink");
   g_assert(fakesink);
 
@@ -90,6 +130,7 @@ int main(int argc, char** argv) {
 
   g_assert(gst_element_link(camera, fakesink));
 
+  g_object_set(camera, "bayer-sharpness-map", true, nullptr);
   g_object_set(camera, "metadata", true, nullptr);
   g_object_set(camera, "num-buffers", 10, nullptr);
 
