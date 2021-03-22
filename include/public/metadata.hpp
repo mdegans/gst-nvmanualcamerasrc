@@ -371,7 +371,7 @@ class Metadata {
    */
   virtual uint64_t getSensorTimestamp() const { return sensorTimestamp_; }
   /**
-   * @brief Get the Sharpness Values if enabled and available.
+   * @brief Get the Sharpness Values if `bayer-sharpness-map` is enabled.
    *
    * @return optional Argus::Array2D<Argus::BayerTuple<float>>
    */
@@ -379,31 +379,44 @@ class Metadata {
   getSharpnessValues() const {
     return sharpnessValues_;
   }
-  virtual std::experimental::optional<Argus::Size2D<uint32_t>>
-  getSharpnessValuesBinCount() {
-    return sharpnessValuesBinCount_;
-  }
-  virtual std::experimental::optional<Argus::Size2D<uint32_t>>
-  getSharpnessValuesBinInterval() {
-    return sharpnessValuesBinInterval_;
-  }
-  virtual std::experimental::optional<Argus::Size2D<uint32_t>>
-  getSharpnessValuesBinSize() {
-    return sharpnessValuesBinSize_;
-  }
-  virtual std::experimental::optional<Argus::Point2D<uint32_t>>
-  getSharpnessValuesBinStart() {
-    return sharpnessValuesBinStart_;
-  }
 #ifdef JETPACK_45
   /**
-   * @brief Get the sharpness score if available.
+   * @brief Get the sharpness score if available. With JetPack 4.5, this is
+   * available even if `bayer-sharpness-map` isn't enabled. This will not
+   * provide exactly the same score as < JetPack 4.5, but it should be similar.
    *
    * @return std::experimental::optional<std::vector<float>>
    */
-  virtual std::experimental::optional<std::vector<float>> getSharpnessScore()
-      const {
-    return sharpnessScore_;
+  virtual std::experimental::optional<float> getSharpnessScore() const {
+    if (!sharpnessScore_) {
+      return std::experimental::nullopt;
+    }
+    const auto ss = sharpnessScore_.value();
+    g_assert(ss.size() == 1);  // in tests, it's always a vector of a single
+    // float, which seems pointless
+    return ss.at(0);
+  }
+#else   // fallback < JETPACK_45
+  /**
+   * @brief Get the mean of getSharpnessValues if available. This will not
+   * provide exactly the same score as > JetPack 4.5 version but it should
+   * be similiar. If you need a ROI, use `getSharpnessValues`.
+   *
+   * @return std::experimental::optional<std::vector<float>>
+   */
+  virtual std::experimental::optional<float> getSharpnessScore() const {
+    if (!sharpnessValues_) {
+      return std::experimental::nullopt;
+    }
+    const auto& vals = sharpnessValues_.value();
+    const auto len = vals.size().area();
+    g_assert(len);  // should never be zero
+    float sum = 0.0f;
+    for (const auto& val : vals) {
+      sum += val.r() + val.gEven() + val.gOdd() + val.b();
+    }
+    // approximately the same as JETPACK_45
+    return (sum * 1000.0f) / (static_cast<float>(len) * 4.0f);
   }
 #endif  // JETPACK_45
   /**
@@ -450,12 +463,6 @@ class Metadata {
   const uint64_t sensorTimestamp_;
   std::experimental::optional<Argus::Array2D<Argus::BayerTuple<float>>>
       sharpnessValues_;
-  std::experimental::optional<Argus::Size2D<uint32_t>> sharpnessValuesBinCount_;
-  std::experimental::optional<Argus::Size2D<uint32_t>>
-      sharpnessValuesBinInterval_;
-  std::experimental::optional<Argus::Size2D<uint32_t>> sharpnessValuesBinSize_;
-  std::experimental::optional<Argus::Point2D<uint32_t>>
-      sharpnessValuesBinStart_;
 #ifdef JETPACK_45
   std::experimental::optional<std::vector<float>> sharpnessScore_;
 #endif  // JETPACK_45

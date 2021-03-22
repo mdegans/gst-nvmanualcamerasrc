@@ -218,10 +218,6 @@ Metadata::Metadata(Argus::ICaptureMetadata* imeta,
       sensorSensitivity_(imeta->getSensorSensitivity()),
       sensorTimestamp_(imeta->getSensorTimestamp()),
       sharpnessValues_(nullopt),
-      sharpnessValuesBinCount_(nullopt),
-      sharpnessValuesBinInterval_(nullopt),
-      sharpnessValuesBinSize_(nullopt),
-      sharpnessValuesBinStart_(nullopt),
 #ifdef JETPACK_45
       sharpnessScore_(nullopt),
 #endif  // JETPACK_45
@@ -303,10 +299,12 @@ Metadata::Metadata(Argus::ICaptureMetadata* imeta,
           "values.");
     }
 
-    sharpnessValuesBinCount_ = iBayerSharpnessMap->getBinCount();
-    sharpnessValuesBinInterval_ = iBayerSharpnessMap->getBinInterval();
-    sharpnessValuesBinSize_ = iBayerSharpnessMap->getBinSize();
-    sharpnessValuesBinStart_ = iBayerSharpnessMap->getBinStart();
+    // These are not very useful since they can be derived from the above and
+    // image resolution, so disabling them:
+    // sharpnessValuesBinCount_ = iBayerSharpnessMap->getBinCount();
+    // sharpnessValuesBinInterval_ = iBayerSharpnessMap->getBinInterval();
+    // sharpnessValuesBinSize_ = iBayerSharpnessMap->getBinSize();
+    // sharpnessValuesBinStart_ = iBayerSharpnessMap->getBinStart();
   } else {
     LOG("IBayerSharpnessMap not available.");
   }
