@@ -28,6 +28,12 @@ tests = [
     'sources': ['test_metadata.cpp'],
     'suites': ['integration'],
   },
+  {
+    'description': 'demo sharpness',
+    'filename': 'demo_sharpness',
+    'sources': ['demo_sharpness.cpp'],
+    'suites': ['interactive'],
+  },
 ]
 
 # build tests (and optionally execute them)
