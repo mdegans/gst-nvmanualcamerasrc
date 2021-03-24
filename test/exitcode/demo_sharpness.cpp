@@ -13,6 +13,8 @@
 
 // set how many frames you want for the demo here
 static const int NUM_FRAMES = 1000;
+// the argus sensor mode (0 is usually best)
+static const int SENSOR_MODE = 0;
 
 GST_DEBUG_CATEGORY_STATIC(test_cat);
 #define GST_CAT_DEFAULT test_cat
@@ -65,6 +67,7 @@ int main(int argc, char** argv) {
   g_object_set(camera, "bayer-sharpness-map", true, nullptr);
   g_object_set(camera, "metadata", true, nullptr);
   g_object_set(camera, "num-buffers", NUM_FRAMES, nullptr);
+  g_object_set(camera, "sensor-mode", SENSOR_MODE, nullptr);
 
   // setup pad probe callback
   pad = gst_element_get_static_pad(sink, "sink");
