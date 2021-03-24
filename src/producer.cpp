@@ -162,7 +162,9 @@ bool producer(int32_t cameraIndex,
 
   GST_INFO("Available Sensor modes :");
   frameRate = src->info.fps_n / src->info.fps_d;
+  GST_INFO("Frame Rate: %d/%d", src->info.fps_n, src->info.fps_d);
   src->frame_duration = get_frame_duration(src->info);
+  GST_INFO("Frame duration: %ld ns", src->frame_duration);
   ISensorMode* iSensorMode[modes.size()];
   Range<float> sensorModeAnalogGainRange;
   Range<float> ispDigitalGainRange;
