@@ -226,9 +226,6 @@ bool producer(int32_t cameraIndex,
                      src->info.fps_n, src->info.fps_d);
   }
 
-  GST_INFO("Frame Rate: %d/%d", src->info.fps_n, src->info.fps_d);
-  GST_INFO("Frame duration: %ld ns", src->frame_duration);
-
   IDenoiseSettings* denoiseSettings = interface_cast<IDenoiseSettings>(request);
   if (!denoiseSettings)
     ORIGINATE_ERROR("Failed to get DenoiseSettings interface");
