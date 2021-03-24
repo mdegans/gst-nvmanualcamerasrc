@@ -60,7 +60,7 @@ G_BEGIN_DECLS
 
 namespace nvmanualcam::defaults {
 
-const int DEFAULT_FPS = 21;       // mostly ignored, deprecated
+const int DEFAULT_FPS = 30;       // mostly ignored, deprecated
 const int DEFAULT_HEIGHT = 1080;  // mostly ignored, deprecated
 const int DEFAULT_WIDTH = 1920;   // mostly ignored, deprecated
 
