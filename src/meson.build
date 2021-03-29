@@ -24,10 +24,11 @@ gst_install_dir = gst_dep.get_variable(pkgconfig: 'pluginsdir')
 # this is not actually a lib install dir, but i'm using the name from
 # the Makefile for consistency
 lib_install_dir = '/usr/lib/aarch64-linux-gnu/tegra/'
-
+# Please, Nvidia, this should not be necessary;
+argus_include_dir = '/usr/src/jetson_multimedia_api/include/'
 # mmapi incdirs
 mmapi_incdirs = [
-  include_directories('/usr/src/jetson_multimedia_api/include/'),
+  include_directories(argus_include_dir),
   include_directories('/usr/src/jetson_multimedia_api/argus/samples/utils/'),
 ]
 
@@ -107,6 +108,7 @@ pkg.generate(libgstnvmanualcamerameta,
   description: 'Metadata library for `nvmanualcamerasrc` Metadata.',
   extra_cflags: gstnvmanualcamera_metadata_cflags,
   libraries: gstnvmanualcamera_metadata_deps,
+  extra_cflags: ['-I' + argus_include_dir],
   subdirs: meson.project_name(),  # $PREFIX/include/$PROJECT_NAME
   variables: gstnvmanualcamerameta_variables,
 )
