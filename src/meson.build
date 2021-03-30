@@ -108,7 +108,6 @@ gstnvmanualcamera_metadata_pkgconfig_cflags = gstnvmanualcamera_metadata_cflags
 gstnvmanualcamera_metadata_pkgconfig_cflags += '-I' + argus_include_dir
 pkg.generate(libgstnvmanualcamerameta,
   description: 'Metadata library for `nvmanualcamerasrc` Metadata.',
-  extra_cflags: gstnvmanualcamera_metadata_cflags,
   libraries: gstnvmanualcamera_metadata_deps,
   extra_cflags: gstnvmanualcamera_metadata_pkgconfig_cflags,
   subdirs: meson.project_name(),  # $PREFIX/include/$PROJECT_NAME
