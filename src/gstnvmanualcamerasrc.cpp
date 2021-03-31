@@ -815,18 +815,7 @@ static void gst_nv_manual_camera_src_init(GstNvManualCameraSrc* self) {
   self->sensor_id = nvmanualcam::defaults::SENSOR_ID;
   self->sensor_mode = nvmanualcam::defaults::SENSOR_MODE_STATE;
   self->total_sensor_modes = nvmanualcam::defaults::TOTAL_SENSOR_MODES;
-  self->controls.NoiseReductionStrength = nvmanualcam::defaults::TNR_STRENGTH;
-  self->controls.NoiseReductionMode = nvmanualcam::defaults::TNR_MODE;
-  self->controls.wbmode = nvmanualcam::defaults::WB_MODE;
-  self->controls.bayer_sharpness_map =
-      nvmanualcam::defaults::BAYER_SHARPNESS_MAP;
-  self->controls.meta_enabled = nvmanualcam::defaults::METADATA;
-  self->controls.saturation = nvmanualcam::defaults::SATURATION;
-  self->controls.EdgeEnhancementStrength = nvmanualcam::defaults::EE_STRENGTH;
-  self->controls.EdgeEnhancementMode = nvmanualcam::defaults::EE_MODE;
-  self->controls.AeAntibandingMode = nvmanualcam::defaults::AEANTIBANDING_MODE;
-  self->controls.AeLock = nvmanualcam::defaults::AE_LOCK;
-  self->controls.AwbLock = nvmanualcam::defaults::AWB_LOCK;
+  self->controls = NvManualCamControls();
 
   g_mutex_init(&self->manual_buffers_queue_lock);
   g_cond_init(&self->manual_buffers_queue_cond);

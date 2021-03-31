@@ -94,23 +94,30 @@ typedef struct _GstNvManualCameraSrcClass GstNvManualCameraSrcClass;
 typedef struct _GstNvManualCameraSrcBuffer GstNvManualCameraSrcBuffer;
 
 /* NvManualCameraSrc Controls */
+// TODO(mdegans): move the defaults from above here, since it's more direct.
 typedef struct NvManualCamControls {
-  NvManualCamAwbMode wbmode;
-  float saturation;
-  float exposure_time;           // in frames
-  uint64_t exposure_real;        // in nanoseconds
-  float gain;                    // min: 1, max: 16
-  float digital_gain;            // min 1, max: 256
-  gboolean meta_enabled;         // enable metadata generation
-  gboolean bayer_sharpness_map;  // enable BayerSharpnessMap metadata
-  NvManualCamNoiseReductionMode NoiseReductionMode;
-  NvManualCamEdgeEnhancementMode EdgeEnhancementMode;
-  NvManualCamAeAntibandingMode AeAntibandingMode;
-  float NoiseReductionStrength;
-  float EdgeEnhancementStrength;
-  float ExposureCompensation;
-  bool AeLock;
-  bool AwbLock;
+  NvManualCamAwbMode wbmode = nvmanualcam::defaults::WB_MODE;
+  float saturation = nvmanualcam::defaults::SATURATION;
+  float exposure_time = nvmanualcam::defaults::EXPOSURE_TIME;  // in frames
+  uint64_t exposure_real = 0;                                  // in nanoseconds
+  float gain = nvmanualcam::defaults::GAIN;                  // min: 1, max: 16
+  float digital_gain = nvmanualcam::defaults::DIGITAL_GAIN;  // min 1, max: 256
+  gboolean meta_enabled =
+      nvmanualcam::defaults::METADATA;  // enable metadata generation
+  gboolean bayer_sharpness_map =
+      nvmanualcam::defaults::BAYER_SHARPNESS_MAP;  // enable BayerSharpnessMap
+                                                   // metadata
+  NvManualCamNoiseReductionMode NoiseReductionMode =
+      nvmanualcam::defaults::TNR_MODE;
+  NvManualCamEdgeEnhancementMode EdgeEnhancementMode =
+      nvmanualcam::defaults::EE_MODE;
+  NvManualCamAeAntibandingMode AeAntibandingMode =
+      nvmanualcam::defaults::AEANTIBANDING_MODE;
+  float NoiseReductionStrength = nvmanualcam::defaults::TNR_STRENGTH;
+  float EdgeEnhancementStrength = nvmanualcam::defaults::EE_STRENGTH;
+  float ExposureCompensation = nvmanualcam::defaults::EXP_COMPENSATION;
+  bool AeLock = nvmanualcam::defaults::AE_LOCK;
+  bool AwbLock = nvmanualcam::defaults::AWB_LOCK;
 } NvManualCamControls;
 
 /* NvManualCameraSrc buffer */
