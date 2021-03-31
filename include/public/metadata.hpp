@@ -387,15 +387,19 @@ class Metadata {
    *
    * @return std::experimental::optional<std::vector<float>>
    */
-  virtual std::experimental::optional<float> getSharpnessScore() const {
-    if (!sharpnessScore_) {
-      return std::experimental::nullopt;
-    }
-    const auto ss = sharpnessScore_.value();
-    g_assert(ss.size() == 1);  // in tests, it's always a vector of a single
-    // float, which seems pointless
-    return ss.at(0);
-  }
+  virtual std::experimental::optional<float> getSharpnessScore() const;
+  /**
+   * @brief Get the sharpness score of a region of the image.
+   * `bayer-sharpness-map` must be enabled on `nvmanualcamerasrc` to use this.
+   *
+   * @param roi should be specified as (0.0 - 1.0) coordinates where 0.0,0.0 is
+   * top left and 1.0,1.0 is the bottom right of the image. This works the same
+   * on JetPack 4.4 and 4.5.
+   *
+   * @return std::experimental::optional<float>
+   */
+  virtual std::experimental::optional<float> getSharpnessScore(
+      Argus::Rectangle<float> roi);
 #else   // fallback < JETPACK_45
   /**
    * @brief Get the mean of getSharpnessValues if available. This will not
@@ -404,20 +408,7 @@ class Metadata {
    *
    * @return std::experimental::optional<std::vector<float>>
    */
-  virtual std::experimental::optional<float> getSharpnessScore() const {
-    if (!sharpnessValues_) {
-      return std::experimental::nullopt;
-    }
-    const auto& vals = sharpnessValues_.value();
-    const auto len = vals.size().area();
-    g_assert(len);  // should never be zero
-    float sum = 0.0f;
-    for (const auto& val : vals) {
-      sum += val.r() + val.gEven() + val.gOdd() + val.b();
-    }
-    // approximately the same as JETPACK_45
-    return (sum * 1000.0f) / (static_cast<float>(len) * 4.0f);
-  }
+  virtual std::experimental::optional<float> getSharpnessScore() const;
 #endif  // JETPACK_45
   /**
    * @brief Get tone map curves if available.

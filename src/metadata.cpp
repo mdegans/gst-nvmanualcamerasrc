@@ -43,7 +43,7 @@ GST_DEBUG_CATEGORY_STATIC(gst_nvmanualcamerasrc_metadata_debug);
 #include <cstdio>
 #define LOG printf
 #define WARNING printf
-#define ERROR(__VA_ARGS__...) fprintf(sterr, __VA_ARGS__)
+#define ERROR(__VA_ARGS__...) fprintf(stderr, __VA_ARGS__)
 #endif  // HAS_GSTREAMER
 
 // static gstreamer tools be here.
@@ -63,6 +63,22 @@ static void destroy_metadata(nvmanualcam::Metadata* meta) {
   delete meta;
 }
 #endif  // HAS_GSTREAMER
+
+template <typename T>
+static inline bool is_normalized(T val) {
+  return val >= 0.0 && val <= 1.0;
+}
+
+template <typename T>
+static bool is_valid_roi(Argus::Rectangle<T> roi) {
+  g_return_val_if_fail(roi.left() < roi.right(), false);
+  g_return_val_if_fail(roi.top() < roi.bottom(), false);
+  g_return_val_if_fail(is_normalized(roi.left()), false);
+  g_return_val_if_fail(is_normalized(roi.top()), false);
+  g_return_val_if_fail(is_normalized(roi.right()), false);
+  g_return_val_if_fail(is_normalized(roi.bottom()), false);
+  return true;
+}
 
 namespace nvmanualcam {
 
@@ -355,6 +371,91 @@ std::string to_json() const {
   return R"(["not implemented"])";
 }
 #endif
+
+#ifdef JETPACK_45
+/**
+ * @brief Get the sharpness score if available. With JetPack 4.5, this is
+ * available even if `bayer-sharpness-map` isn't enabled. This will not
+ * provide exactly the same score as < JetPack 4.5, but it should be similar.
+ *
+ * @return std::experimental::optional<std::vector<float>>
+ */
+std::experimental::optional<float> Metadata::getSharpnessScore() const {
+  if (!sharpnessScore_) {
+    return std::experimental::nullopt;
+  }
+  const auto ss = sharpnessScore_.value();
+  g_assert(ss.size() == 1);  // in tests, it's always a vector of a single
+  // float, which seems pointless
+  return ss.at(0);
+}
+std::experimental::optional<float> Metadata::getSharpnessScore(
+    Argus::Rectangle<float> roi) {
+  // TODO(indra): use laplacian variance if sharpnessScore not available.
+  //              possibly, use sharpness score together with variance for
+  //              more accurate focus?
+  // NOTE(mdegans): sharpnessScore will always be available. It's just "faked"
+  //  as a mean of getSharpnessValues on the metadata in metadata.hpp (may
+  //  move this to metadata.cpp). SharpnessValues may not be calculated at all
+  //  if `bayer-sharpness-map` is set to false on `nvmanualcameasrc`.
+  // get focus score from upstream, if it's available
+  if (!is_valid_roi(roi)) {
+    ERROR("Can't get sharpness score since supplied ROI is invalid.");
+    return nullopt;
+  }
+  if (auto opt_values = sharpnessValues_) {
+    // Bayer Sharpness Map
+    Argus::Array2D<Argus::BayerTuple<float>> bsm = opt_values.value();
+    // PRAISE(mdegans): to Nvidia for using top, left, width, and height instead
+    // of x and y, which despite using for years I can never remember which is
+    // which. I can recite my credit card number, but not that.
+    // TODO(mdegans): linear filtering, since right now this is basically
+    //  "nearest"
+    Argus::Point2D<uint> tl(static_cast<uint>(roi.left() * bsm.size().width()),
+                            static_cast<uint>(roi.top() * bsm.size().height()));
+    Argus::Point2D<uint> br(
+        static_cast<uint>(roi.right() * bsm.size().width()),
+        static_cast<uint>(roi.bottom() * bsm.size().height()));
+    float sharpness_sum = 0.0f;
+
+    for (uint x = tl.x(); x < br.x(); x++) {
+      for (uint y = tl.y(); y < br.y(); y++) {
+        sharpness_sum += bsm[x][y];
+      }
+    }
+
+    return sharpness_sum /
+           static_cast<float>((tl.x() - br.x()) + (tl.y() - br.y()));
+  } else {
+    ERROR(
+        "bayer-sharpness-map needs to be enabled on `nvmanualcameasrc` to use "
+        "getSharpnessScore with a roi. If it is enabled, please report this.");
+    return nullopt;
+  }
+}
+#else   // fallback < JETPACK_45
+/**
+ * @brief Get the mean of getSharpnessValues if available. This will not
+ * provide exactly the same score as > JetPack 4.5 version but it should
+ * be similiar. If you need a ROI, use `getSharpnessValues`.
+ *
+ * @return std::experimental::optional<std::vector<float>>
+ */
+std::experimental::optional<float> Metadata::getSharpnessScore() const {
+  if (!sharpnessValues_) {
+    return std::experimental::nullopt;
+  }
+  const auto& vals = sharpnessValues_.value();
+  const auto len = vals.size().area();
+  g_assert(len);  // should never be zero
+  float sum = 0.0f;
+  for (const auto& val : vals) {
+    sum += val.r() + val.gEven() + val.gOdd() + val.b();
+  }
+  // approximately the same as JETPACK_45
+  return (sum * 1000.0f) / (static_cast<float>(len) * 4.0f);
+}
+#endif  // JETPACK_45
 
 std::experimental::optional<RGBCurves> Metadata::getToneMapCurves() const {
   if (toneMapCurveEnabled_ && toneMapCurveR_ && toneMapCurveG_ &&
