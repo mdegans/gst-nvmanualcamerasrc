@@ -372,23 +372,6 @@ std::string to_json() const {
 }
 #endif
 
-#ifdef JETPACK_45
-/**
- * @brief Get the sharpness score if available. With JetPack 4.5, this is
- * available even if `bayer-sharpness-map` isn't enabled. This will not
- * provide exactly the same score as < JetPack 4.5, but it should be similar.
- *
- * @return std::experimental::optional<std::vector<float>>
- */
-std::experimental::optional<float> Metadata::getSharpnessScore() const {
-  if (!sharpnessScore_) {
-    return std::experimental::nullopt;
-  }
-  const auto ss = sharpnessScore_.value();
-  g_assert(ss.size() == 1);  // in tests, it's always a vector of a single
-  // float, which seems pointless
-  return ss.at(0);
-}
 std::experimental::optional<float> Metadata::getSharpnessScore(
     Argus::Rectangle<float> roi) {
   // TODO(indra): use laplacian variance if sharpnessScore not available.
@@ -432,6 +415,23 @@ std::experimental::optional<float> Metadata::getSharpnessScore(
         "getSharpnessScore with a roi. If it is enabled, please report this.");
     return nullopt;
   }
+}
+#ifdef JETPACK_45
+/**
+ * @brief Get the sharpness score if available. With JetPack 4.5, this is
+ * available even if `bayer-sharpness-map` isn't enabled. This will not
+ * provide exactly the same score as < JetPack 4.5, but it should be similar.
+ *
+ * @return std::experimental::optional<std::vector<float>>
+ */
+std::experimental::optional<float> Metadata::getSharpnessScore() const {
+  if (!sharpnessScore_) {
+    return std::experimental::nullopt;
+  }
+  const auto ss = sharpnessScore_.value();
+  g_assert(ss.size() == 1);  // in tests, it's always a vector of a single
+  // float, which seems pointless
+  return ss.at(0);
 }
 #else   // fallback < JETPACK_45
 /**
