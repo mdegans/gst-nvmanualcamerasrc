@@ -379,18 +379,10 @@ class Metadata {
   getSharpnessValues() const {
     return sharpnessValues_;
   }
-#ifdef JETPACK_45
   /**
-   * @brief Get the sharpness score if available. With JetPack 4.5, this is
-   * available even if `bayer-sharpness-map` isn't enabled. This will not
-   * provide exactly the same score as < JetPack 4.5, but it should be similar.
-   *
-   * @return std::experimental::optional<std::vector<float>>
-   */
-  virtual std::experimental::optional<float> getSharpnessScore() const;
-  /**
-   * @brief Get the sharpness score of a region of the image.
-   * `bayer-sharpness-map` must be enabled on `nvmanualcamerasrc` to use this.
+   * @brief Get the sharpness score of a region of the image using a mean from
+   * getSharpnessValues. `bayer-sharpness-map` must be enabled on
+   * `nvmanualcamerasrc` to use this.
    *
    * @param roi should be specified as (0.0 - 1.0) coordinates where 0.0,0.0 is
    * top left and 1.0,1.0 is the bottom right of the image. This works the same
@@ -400,6 +392,15 @@ class Metadata {
    */
   virtual std::experimental::optional<float> getSharpnessScore(
       Argus::Rectangle<float> roi);
+#ifdef JETPACK_45
+  /**
+   * @brief Get the sharpness score if available. With JetPack 4.5, this is
+   * available even if `bayer-sharpness-map` isn't enabled. This will not
+   * provide exactly the same score as < JetPack 4.5, but it should be similar.
+   *
+   * @return std::experimental::optional<std::vector<float>>
+   */
+  virtual std::experimental::optional<float> getSharpnessScore() const;
 #else   // fallback < JETPACK_45
   /**
    * @brief Get the mean of getSharpnessValues if available. This will not
