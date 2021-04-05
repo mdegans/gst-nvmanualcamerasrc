@@ -394,16 +394,19 @@ std::experimental::optional<float> Metadata::getSharpnessScore(
     // which. I can recite my credit card number, but not that.
     // TODO(mdegans): linear filtering, since right now this is basically
     //  "nearest"
-    Argus::Point2D<uint> tl(static_cast<uint>(roi.left() * bsm.size().width()),
-                            static_cast<uint>(roi.top() * bsm.size().height()));
-    Argus::Point2D<uint> br(
-        static_cast<uint>(roi.right() * bsm.size().width()),
-        static_cast<uint>(roi.bottom() * bsm.size().height()));
+    uint32_t bsm_width = bsm.size().width();
+    uint32_t bsm_height = bsm.size().height();
+    Argus::Point2D<uint> tl(static_cast<uint>(roi.left() * bsm_width),
+                            static_cast<uint>(roi.top() * bsm_height));
+    Argus::Point2D<uint> br(static_cast<uint>(roi.right() * bsm_width),
+                            static_cast<uint>(roi.bottom() * bsm_height));
     float sharpness_sum = 0.0f;
-
+    Argus::BayerTuple<float> rggb = {};
     for (uint x = tl.x(); x < br.x(); x++) {
       for (uint y = tl.y(); y < br.y(); y++) {
-        sharpness_sum += bsm[x][y];
+        rggb = bsm[y * bsm_width + x];
+        sharpness_sum +=
+            (rggb.r() + rggb.gEven() + rggb.gOdd() + rggb.b()) / 4.0f;
       }
     }
 
