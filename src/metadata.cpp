@@ -411,7 +411,7 @@ std::experimental::optional<float> Metadata::getSharpnessScore(
     }
 
     return sharpness_sum /
-           static_cast<float>((tl.x() - br.x()) + (tl.y() - br.y()));
+           static_cast<float>((tl.x() - br.x()) * (tl.y() - br.y()));
   } else {
     ERROR(
         "bayer-sharpness-map needs to be enabled on `nvmanualcameasrc` to use "
