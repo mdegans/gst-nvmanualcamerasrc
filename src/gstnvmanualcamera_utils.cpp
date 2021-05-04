@@ -31,8 +31,8 @@
 
 namespace nvmanualcam {
 
-guint64 get_frame_duration(const GstVideoInfo& info) {
-  return (guint64)1e9 * info.fps_d / info.fps_n;
+GstClockTime get_frame_duration(const GstVideoInfo& info) {
+  return (GstClockTime)1e9 * info.fps_d / info.fps_n;
 }
 
 }  // namespace nvmanualcam

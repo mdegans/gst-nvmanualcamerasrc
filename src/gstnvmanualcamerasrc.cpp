@@ -45,6 +45,8 @@
 #include "metadata.hpp"
 #include "producer.hpp"
 
+#include "impl_data.hpp"
+
 #include <Argus/Argus.h>
 
 #include <gst/base/gstbasesrc.h>
@@ -75,32 +77,6 @@ GST_DEBUG_CATEGORY_STATIC(gst_nvmanualcamerasrc_debug);
 #define GST_CAT_DEFAULT gst_nvmanualcamerasrc_debug
 
 G_BEGIN_DECLS
-
-enum {
-  PROP_0,
-  PROP_AE_LOCK,
-  PROP_AEANTIBANDING_MODE,
-  PROP_AWB_LOCK,
-  PROP_BUFAPI,
-  PROP_DIGITAL_GAIN,
-  PROP_EDGE_ENHANCEMENT_MODE,
-  PROP_EDGE_ENHANCEMENT_STRENGTH,
-  PROP_EXPOSURE_COMPENSATION,
-  PROP_EXPOSURE_REAL,
-  PROP_EXPOSURE_TIME,
-  PROP_GAIN,
-  PROP_BAYER_SHARPNESS_MAP,
-  PROP_METADATA,
-  PROP_SATURATION,
-  PROP_SENSOR_ID,
-  PROP_SENSOR_MODE,
-  PROP_SILENT,
-  PROP_TIMEOUT,
-  PROP_TNR_MODE,
-  PROP_TNR_STRENGTH,
-  PROP_TOTAL_SENSOR_MODES,
-  PROP_WHITE_BALANCE,
-};
 
 struct _GstNVManualMemory {
   GstMemory mem;
@@ -344,7 +320,7 @@ static gboolean gst_nv_manual_camera_set_caps(GstBaseSrc* base, GstCaps* caps) {
       gst_caps_unref(old);
   }
 
-  if (self->bufApi == FALSE) {
+  if (!self->controls->getBufApi()) {
     self->pool = gst_buffer_pool_new();
     GstNVManualMemoryAllocator* allocator =
         (GstNVManualMemoryAllocator*)g_object_new(
@@ -413,14 +389,20 @@ static gboolean gst_nv_manual_camera_unlock_stop(GstBaseSrc* base) {
 
 static gboolean gst_nv_manual_camera_stop(GstBaseSrc* base) {
   GstNvManualCameraSrc* self = (GstNvManualCameraSrc*)base;
-  self->stop_requested = TRUE;
+  bool success = true;
+
+  self->stop_requested = true;
   if (!self->timeout) {
-    Argus::ICaptureSession* l_iCaptureSession =
-        (Argus::ICaptureSession*)self->iCaptureSession_ptr;
-    if (l_iCaptureSession) {
-      l_iCaptureSession->cancelRequests();
-      l_iCaptureSession->stopRepeat();
-      l_iCaptureSession->waitForIdle();
+    Argus::ICaptureSession* sess =
+        Argus::interface_cast<Argus::ICaptureSession*>(
+            self->actx->iCaptureSession);
+    if (sess) {
+      sess->cancelRequests();
+      sess->stopRepeat();
+      sess->waitForIdle();
+    } else {
+      GST_ERROR_OBJECT(self, "Could not get iCaptureSession");
+      success = false;
     }
   }
   g_mutex_lock(&self->eos_lock);
@@ -428,7 +410,7 @@ static gboolean gst_nv_manual_camera_stop(GstBaseSrc* base) {
   g_mutex_unlock(&self->eos_lock);
   gst_buffer_pool_set_active(self->pool, false);
   g_thread_join(self->manual_thread);
-  return TRUE;
+  return success;
 }
 
 static gpointer manual_thread(gpointer base) {
@@ -439,9 +421,10 @@ static gpointer manual_thread(gpointer base) {
   int32_t secToRun = self->timeout;
   Argus::Size2D<uint32_t> streamSize(self->info.width, self->info.height);
 
-  nvmanualcam::producer(cameraIndex, cameraMode, streamSize, secToRun, self);
+  nvmanualcam::producer(cameraIndex, cameraMode, streamSize, secToRun,
+                        controls);
 
-  self->stop_requested = TRUE;
+  self->stop_requested = true;
 
   g_mutex_lock(&self->manual_buffers_queue_lock);
   g_cond_signal(&self->manual_buffers_queue_cond);
@@ -466,7 +449,7 @@ static gpointer consumer_thread(gpointer base) {
 
   GstNvManualCameraSrc* self = (GstNvManualCameraSrc*)base;
 
-  while (FALSE == self->stop_requested) {
+  while (!self->a_ctx->stop_requested) {
     g_mutex_lock(&self->manual_buffers_queue_lock);
     if (self->stop_requested) {
       g_mutex_unlock(&self->manual_buffers_queue_lock);
@@ -498,7 +481,7 @@ static gpointer consumer_thread(gpointer base) {
         goto done;
       }
       nv_mem = (GstNVManualMemory*)mem;
-      if (self->controls.meta_enabled) {
+      if (self->controls->getMetaEnabled()) {
         g_assert(consumerFrameInfo->metadata);
         nvmanualcam::attachMetadata(std::move(consumerFrameInfo->metadata),
                                     buffer);
@@ -616,6 +599,8 @@ static void gst_nv_manual_camera_src_class_init(
   base_src_class->unlock = GST_DEBUG_FUNCPTR(gst_nv_manual_camera_unlock);
   base_src_class->unlock_stop =
       GST_DEBUG_FUNCPTR(gst_nv_manual_camera_unlock_stop);
+
+  Properties::install(gobject_class);
 
   g_object_class_install_property(
       gobject_class, PROP_WHITE_BALANCE,
@@ -779,12 +764,6 @@ static void gst_nv_manual_camera_src_class_init(
           nvmanualcam::defaults::BAYER_SHARPNESS_MAP,
           (GParamFlags)(G_PARAM_READWRITE | GST_PARAM_MUTABLE_READY)));
 
-  g_object_class_install_property(
-      gobject_class, PROP_BUFAPI,
-      g_param_spec_boolean(
-          "bufapi-version", "Buffer API", "set to use new Buffer API",
-          nvmanualcam::defaults::BUFAPI, (GParamFlags)G_PARAM_READWRITE));
-
   gst_element_class_set_details_simple(
       gstelement_class, "NvManualCameraSrc", "Video/Capture",
       "nVidia MANUAL Camera Source",
@@ -800,22 +779,14 @@ static void gst_nv_manual_camera_src_class_init(
  * initialize instance structure
  */
 static void gst_nv_manual_camera_src_init(GstNvManualCameraSrc* self) {
-  gst_video_info_init(&self->info);
-  self->info.width = nvmanualcam::defaults::DEFAULT_WIDTH;
-  self->info.height = nvmanualcam::defaults::DEFAULT_HEIGHT;
-  self->info.fps_n = nvmanualcam::defaults::DEFAULT_FPS;
-  self->info.fps_d = 1;
-  self->frame_duration = nvmanualcam::get_frame_duration(self->info);
-  self->stop_requested = FALSE;
-  self->unlock_requested = FALSE;
-  self->silent = TRUE;
+  self->stop_requested = false;
+  self->unlock_requested = false;
   self->outcaps = nullptr;
-  self->timeout = 0;
-  self->in_error = FALSE;
-  self->sensor_id = nvmanualcam::defaults::SENSOR_ID;
-  self->sensor_mode = nvmanualcam::defaults::SENSOR_MODE_STATE;
-  self->total_sensor_modes = nvmanualcam::defaults::TOTAL_SENSOR_MODES;
-  self->controls = NvManualCamControls();
+
+  self->in_error = false;
+
+  self->controls = std::make_shared<_GstNvManualCameraSrc::Controls>();
+  self->controls->setFrameDuration(nvmanualcam::get_frame_duration(self->info));
 
   g_mutex_init(&self->manual_buffers_queue_lock);
   g_cond_init(&self->manual_buffers_queue_cond);
@@ -839,184 +810,52 @@ static void gst_nv_manual_camera_src_init(GstNvManualCameraSrc* self) {
 static void gst_nv_manual_camera_src_finalize(GObject* object) {
   GstNvManualCameraSrc* self = GST_NVMANUALCAMERASRC(object);
   GST_DEBUG_OBJECT(self, "cleaning up");
+
   g_mutex_clear(&self->nvmm_buffers_queue_lock);
   g_cond_clear(&self->nvmm_buffers_queue_cond);
+
   g_mutex_clear(&self->manual_buffers_queue_lock);
   g_cond_clear(&self->manual_buffers_queue_cond);
+
   g_mutex_clear(&self->manual_buffer_consumed_lock);
   g_cond_clear(&self->manual_buffer_consumed_cond);
+
   g_mutex_clear(&self->eos_lock);
   g_cond_clear(&self->eos_cond);
+
+  self->controls.reset();
+}
+
+static bool valid_id(GObject* object, guint id, GParamSpec* pspec) {
+  if (id >= static_cast<guint>(Properties::ID::SENTINEL)) {
+    G_OBJECT_WARN_INVALID_PROPERTY_ID(object, id, pspec);
+    return false;
+  }
+  return true;
 }
 
 static void gst_nv_manual_camera_src_set_property(GObject* object,
-                                                  guint prop_id,
+                                                  guint id,
                                                   const GValue* value,
                                                   GParamSpec* pspec) {
-  GstNvManualCameraSrc* self = GST_NVMANUALCAMERASRC(object);
+  auto self = GST_NVMANUALCAMERASRC(object);
 
-  switch (prop_id) {
-    case PROP_SILENT:
-      self->silent = g_value_get_boolean(value);
-      break;
-    case PROP_TIMEOUT:
-      self->timeout = g_value_get_uint(value);
-      break;
-    case PROP_WHITE_BALANCE:
-      self->controls.wbmode = (NvManualCamAwbMode)g_value_get_enum(value);
-      self->wbPropSet = TRUE;
-      break;
-    case PROP_SATURATION:
-      self->controls.saturation = g_value_get_float(value);
-      self->saturationPropSet = TRUE;
-      break;
-    case PROP_SENSOR_ID:
-      self->sensor_id = g_value_get_int(value);
-      break;
-    case PROP_SENSOR_MODE:
-      self->sensor_mode = g_value_get_int(value);
-      break;
-    case PROP_EXPOSURE_TIME:
-      self->controls.exposure_time = g_value_get_float(value);
-      self->controls.exposure_real =
-          self->controls.exposure_time * self->frame_duration;
-      self->exposureTimePropSet = true;
-      break;
-    case PROP_GAIN:
-      self->controls.gain = g_value_get_float(value);
-      self->gainPropSet = true;
-      break;
-    case PROP_DIGITAL_GAIN:
-      self->controls.digital_gain = g_value_get_float(value);
-      self->ispDigitalGainPropSet = true;
-      break;
-    case PROP_TNR_STRENGTH:
-      self->controls.NoiseReductionStrength = g_value_get_float(value);
-      self->tnrStrengthPropSet = TRUE;
-      break;
-    case PROP_TNR_MODE:
-      self->controls.NoiseReductionMode =
-          (NvManualCamNoiseReductionMode)g_value_get_enum(value);
-      self->tnrModePropSet = TRUE;
-      break;
-    case PROP_EDGE_ENHANCEMENT_STRENGTH:
-      self->controls.EdgeEnhancementStrength = g_value_get_float(value);
-      self->edgeEnhancementStrengthPropSet = TRUE;
-      break;
-    case PROP_EDGE_ENHANCEMENT_MODE:
-      self->controls.EdgeEnhancementMode =
-          (NvManualCamEdgeEnhancementMode)g_value_get_enum(value);
-      self->edgeEnhancementModePropSet = TRUE;
-      break;
-    case PROP_AEANTIBANDING_MODE:
-      self->controls.AeAntibandingMode =
-          (NvManualCamAeAntibandingMode)g_value_get_enum(value);
-      self->aeAntibandingPropSet = TRUE;
-      break;
-    case PROP_EXPOSURE_COMPENSATION:
-      self->controls.ExposureCompensation = g_value_get_float(value);
-      self->exposureCompensationPropSet = TRUE;
-      break;
-    case PROP_AE_LOCK:
-      self->controls.AeLock = g_value_get_boolean(value);
-      self->aeLockPropSet = TRUE;
-      break;
-    case PROP_AWB_LOCK:
-      self->controls.AwbLock = g_value_get_boolean(value);
-      self->awbLockPropSet = TRUE;
-      break;
-    case PROP_BAYER_SHARPNESS_MAP:
-      self->controls.bayer_sharpness_map = g_value_get_boolean(value);
-      break;
-    case PROP_METADATA:
-      self->controls.meta_enabled = g_value_get_boolean(value);
-      break;
-    case PROP_BUFAPI:
-      self->bufApi = g_value_get_boolean(value);
-      break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID(object, prop_id, pspec);
-      break;
-  }
+  g_assert(valid_id(object, id, pspec));
+
+  g_assert(self->controls->set_property(static_cast<Properties::ID>(id), value,
+                                        pspec));
 }
 
 static void gst_nv_manual_camera_src_get_property(GObject* object,
-                                                  guint prop_id,
+                                                  guint id,
                                                   GValue* value,
                                                   GParamSpec* pspec) {
-  GstNvManualCameraSrc* self = GST_NVMANUALCAMERASRC(object);
+  auto self = GST_NVMANUALCAMERASRC(object);
 
-  switch (prop_id) {
-    case PROP_SILENT:
-      g_value_set_boolean(value, self->silent);
-      break;
-    case PROP_TIMEOUT:
-      g_value_set_uint(value, self->timeout);
-      break;
-    case PROP_WHITE_BALANCE:
-      g_value_set_enum(value, self->controls.wbmode);
-      break;
-    case PROP_SATURATION:
-      g_value_set_float(value, self->controls.saturation);
-      break;
-    case PROP_SENSOR_ID:
-      g_value_set_int(value, self->sensor_id);
-      break;
-    case PROP_SENSOR_MODE:
-      g_value_set_int(value, self->sensor_mode);
-      break;
-    case PROP_TOTAL_SENSOR_MODES:
-      g_value_set_int(value, self->total_sensor_modes);
-      break;
-    case PROP_EXPOSURE_TIME:
-      g_value_set_float(value, self->controls.exposure_time);
-      break;
-    case PROP_EXPOSURE_REAL:
-      g_value_set_uint64(value, self->controls.exposure_real);
-      break;
-    case PROP_GAIN:
-      g_value_set_float(value, self->controls.gain);
-      break;
-    case PROP_DIGITAL_GAIN:
-      g_value_set_float(value, self->controls.digital_gain);
-      break;
-    case PROP_TNR_STRENGTH:
-      g_value_set_float(value, self->controls.NoiseReductionStrength);
-      break;
-    case PROP_TNR_MODE:
-      g_value_set_enum(value, self->controls.NoiseReductionMode);
-      break;
-    case PROP_EDGE_ENHANCEMENT_MODE:
-      g_value_set_enum(value, self->controls.EdgeEnhancementMode);
-      break;
-    case PROP_EDGE_ENHANCEMENT_STRENGTH:
-      g_value_set_float(value, self->controls.EdgeEnhancementStrength);
-      break;
-    case PROP_AEANTIBANDING_MODE:
-      g_value_set_enum(value, self->controls.AeAntibandingMode);
-      break;
-    case PROP_EXPOSURE_COMPENSATION:
-      g_value_set_float(value, self->controls.ExposureCompensation);
-      break;
-    case PROP_AE_LOCK:
-      g_value_set_boolean(value, self->controls.AeLock);
-      break;
-    case PROP_AWB_LOCK:
-      g_value_set_boolean(value, self->controls.AwbLock);
-      break;
-    case PROP_BAYER_SHARPNESS_MAP:
-      g_value_set_boolean(value, self->controls.bayer_sharpness_map);
-      break;
-    case PROP_METADATA:
-      g_value_set_boolean(value, self->controls.meta_enabled);
-      break;
-    case PROP_BUFAPI:
-      g_value_set_boolean(value, self->bufApi);
-      break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID(object, prop_id, pspec);
-      break;
-  }
+  g_assert(valid_id(object, id, pspec));
+
+  g_assert(self->controls->get_property(static_cast<Properties::ID>(id), value,
+                                        pspec));
 }
 
 G_END_DECLS

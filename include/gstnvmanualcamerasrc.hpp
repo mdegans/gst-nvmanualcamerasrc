@@ -58,67 +58,9 @@ G_BEGIN_DECLS
 #define GST_IS_NVMANUALCAMERASRC_CLASS(klass) \
   (G_TYPE_CHECK_CLASS_TYPE((klass), GST_TYPE_NVMANUALCAMERASRC))
 
-namespace nvmanualcam::defaults {
-
-const int DEFAULT_FPS = 30;       // mostly ignored, deprecated
-const int DEFAULT_HEIGHT = 1080;  // mostly ignored, deprecated
-const int DEFAULT_WIDTH = 1920;   // mostly ignored, deprecated
-
-const auto AEANTIBANDING_MODE = NvManualCamAeAntibandingMode_Off;
-const auto EE_MODE = NvManualCamEdgeEnhancementMode_Off;
-const auto TNR_MODE = NvManualCamNoiseReductionMode_Off;
-const auto WB_MODE = NvManualCamAwbMode_Auto;
-const bool AE_LOCK = false;
-const bool AWB_LOCK = false;
-const bool BAYER_SHARPNESS_MAP = false;
-const bool METADATA = true;
-const bool BUFAPI = false;
-const bool SILENT = false;
-const float DIGITAL_GAIN = 1.0f;
-const float EE_STRENGTH = -1.0;
-const float EXP_COMPENSATION = 0.0;
-const float EXPOSURE_TIME = 1.0;
-const float GAIN = 1.0f;
-const float SATURATION = 1.0;
-const float TNR_STRENGTH = -1.0;
-const int SENSOR_MODE_STATE = -1;
-const uint SENSOR_ID = 0;
-const uint TIMEOUT = 0;
-const uint TOTAL_SENSOR_MODES = 0;
-
-}  // namespace nvmanualcam::defaults
-
 typedef struct _GstNvManualCameraSrc GstNvManualCameraSrc;
 typedef struct _GstNvManualCameraSrcClass GstNvManualCameraSrcClass;
-
 typedef struct _GstNvManualCameraSrcBuffer GstNvManualCameraSrcBuffer;
-
-/* NvManualCameraSrc Controls */
-// TODO(mdegans): move the defaults from above here, since it's more direct.
-typedef struct NvManualCamControls {
-  NvManualCamAwbMode wbmode = nvmanualcam::defaults::WB_MODE;
-  float saturation = nvmanualcam::defaults::SATURATION;
-  float exposure_time = nvmanualcam::defaults::EXPOSURE_TIME;  // in frames
-  uint64_t exposure_real = 0;                                  // in nanoseconds
-  float gain = nvmanualcam::defaults::GAIN;                  // min: 1, max: 16
-  float digital_gain = nvmanualcam::defaults::DIGITAL_GAIN;  // min 1, max: 256
-  gboolean meta_enabled =
-      nvmanualcam::defaults::METADATA;  // enable metadata generation
-  gboolean bayer_sharpness_map =
-      nvmanualcam::defaults::BAYER_SHARPNESS_MAP;  // enable BayerSharpnessMap
-                                                   // metadata
-  NvManualCamNoiseReductionMode NoiseReductionMode =
-      nvmanualcam::defaults::TNR_MODE;
-  NvManualCamEdgeEnhancementMode EdgeEnhancementMode =
-      nvmanualcam::defaults::EE_MODE;
-  NvManualCamAeAntibandingMode AeAntibandingMode =
-      nvmanualcam::defaults::AEANTIBANDING_MODE;
-  float NoiseReductionStrength = nvmanualcam::defaults::TNR_STRENGTH;
-  float EdgeEnhancementStrength = nvmanualcam::defaults::EE_STRENGTH;
-  float ExposureCompensation = nvmanualcam::defaults::EXP_COMPENSATION;
-  bool AeLock = nvmanualcam::defaults::AE_LOCK;
-  bool AwbLock = nvmanualcam::defaults::AWB_LOCK;
-} NvManualCamControls;
 
 /* NvManualCameraSrc buffer */
 struct _GstNvManualCameraSrcBuffer {
@@ -135,6 +77,9 @@ typedef struct NvManualFrameInfo {
   std::unique_ptr<nvmanualcam::Metadata> metadata;
 } NvManualFrameInfo;
 
+struct ArgusControls;
+struct ArgusCtx;
+
 struct _GstNvManualCameraSrc {
   GstBaseSrc base_nvmanualcamera;
 
@@ -143,25 +88,18 @@ struct _GstNvManualCameraSrc {
   GThread* consumer_thread;
   GThread* manual_thread;
 
-  gboolean silent;
-
   GstBufferPool* pool;
 
   GstCaps* outcaps;
 
   GstVideoInfo info;
   guint64 frame_duration;  // in nanoseconds
-  gint sensor_id;
-  gint sensor_mode;
-
-  guint total_sensor_modes;
   guint timeout;
 
   GQueue* nvmm_buffers;
   GMutex nvmm_buffers_queue_lock;
   GCond nvmm_buffers_queue_cond;
 
-  gboolean stop_requested;
   gboolean unlock_requested;
 
   NvBufferTransformParams transform_params;
@@ -177,30 +115,10 @@ struct _GstNvManualCameraSrc {
   GMutex eos_lock;
   GCond eos_cond;
 
-  NvManualCamControls controls;
-  gboolean wbPropSet;
-  gboolean saturationPropSet;
-  gboolean exposureTimePropSet;
-  gboolean gainPropSet;
-  gboolean ispDigitalGainPropSet;
-  gboolean tnrStrengthPropSet;
-  gboolean tnrModePropSet;
-  gboolean edgeEnhancementStrengthPropSet;
-  gboolean edgeEnhancementModePropSet;
-  gboolean aeAntibandingPropSet;
-  gboolean exposureCompensationPropSet;
-  gboolean aeLockPropSet;
-  gboolean awbLockPropSet;
-  gboolean bufApi;
   gboolean in_error;
-  void* iRequest_ptr;
-  void* iCaptureSession_ptr;
-  void* iAutoControlSettings_ptr;
-  void* request_ptr;
-  void* outRequest_ptr;
-  void* iDenoiseSettings_ptr;
-  void* iEeSettings_ptr;
-  void* iRequestSourceSettings_ptr;
+
+  std::shared_ptr<ArgusControls> controls;
+
   NvManualFrameInfo* frameInfo;
 };
 

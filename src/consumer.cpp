@@ -27,6 +27,7 @@
  */
 
 #include "consumer.hpp"
+#include "impl_data.hpp"
 #include "logging.hpp"
 #include "metadata.hpp"
 
@@ -34,277 +35,190 @@
 #include <EGLStream/NV/ImageNativeBuffer.h>
 #include <Error.h>
 
+#include <inttypes.h>
+
 GST_DEBUG_CATEGORY_STATIC(gst_nvmanualcamerasrc_consumer_debug);
 #define GST_CAT_DEFAULT gst_nvmanualcamerasrc_consumer_debug
 
 using namespace Argus;
 using namespace EGLStream;
 
-namespace nvmanualcam::utils {
+namespace nvmanualcam::consumer {
 
-bool Consumer::threadInitialize(GstNvManualCameraSrc* _) {
-  (void)_;
-  // Create the FrameConsumer.
-  m_consumer = UniqueObj<FrameConsumer>(FrameConsumer::create(m_stream));
-  if (!m_consumer)
-    ORIGINATE_ERROR("Failed to create FrameConsumer");
-
-  return true;
-}
-
-bool Consumer::threadExecute(GstNvManualCameraSrc* src) {
+bool execute(std::shared_ptr<ArgusCtx> ctx,
+             std::shared_ptr<ArgusControls> ctrl) {
   GST_DEBUG_CATEGORY_INIT(gst_nvmanualcamerasrc_consumer_debug,
                           "nvmanualcamerasrc:consumer", 0,
                           "nvmanualcamerasrc consumer");
-  IEGLOutputStream* iStream = interface_cast<IEGLOutputStream>(m_stream);
-  Size2D<uint32_t> streamSize(src->info.width, src->info.height);
-  IFrameConsumer* iFrameConsumer = interface_cast<IFrameConsumer>(m_consumer);
 
-  // Wait until the producer has connected to the stream.
-  GST_INFO("Waiting until producer is connected...");
-  if (iStream->waitUntilConnected() != STATUS_OK)
-    ORIGINATE_ERROR("Stream failed to connect.");
-  GST_INFO("Producer has connected; continuing.");
-  IAutoControlSettings* l_iAutoControlSettings_ptr =
-      (IAutoControlSettings*)src->iAutoControlSettings_ptr;
-  ICaptureSession* l_iCaptureSession =
-      (ICaptureSession*)src->iCaptureSession_ptr;
-  IDenoiseSettings* l_iDenoiseSettings_ptr =
-      (IDenoiseSettings*)src->iDenoiseSettings_ptr;
-  IEdgeEnhanceSettings* l_iEeSettings_ptr =
-      (IEdgeEnhanceSettings*)src->iEeSettings_ptr;
-  ISourceSettings* l_iRequestSourceSettings_ptr =
-      (ISourceSettings*)src->iRequestSourceSettings_ptr;
-  Request* l_captureRequest = (Request*)src->request_ptr;
-  Range<float> sensorModeAnalogGainRange;
-  Range<float> ispDigitalGainRange;
-  Range<uint64_t> limitExposureTimeRange;
-  l_iCaptureSession->repeat(l_captureRequest);
+  Argus::Status err = Argus::Status::STATUS_OK; /** an error if nonzero */
+  NvManualFrameInfo frameInfo = {};
+  frameInfo.fd = -1;
 
-  src->frameInfo = g_slice_new0(NvManualFrameInfo);
-  src->frameInfo->fd = -1;
-  src->frameInfo->metadata.reset();
-  while (true) {
-    UniqueObj<Frame> frame(iFrameConsumer->acquireFrame());
-    if (src->stop_requested == TRUE) {
-      break;
-    }
-    if (!frame) {
-      g_mutex_lock(&src->manual_buffers_queue_lock);
-      src->stop_requested = TRUE;
-      g_mutex_unlock(&src->manual_buffers_queue_lock);
-      break;
-    }
+  // start repeated requests
+  ctx->repeat_request();
 
-    if (src->wbPropSet) {
-      switch (src->controls.wbmode) {
+  while ((!ctx->stop_requested) && (err != Argus::Status::STATUS_OK)) {
+    // set properites if any have been updated, then update the request.
+    if (ctrl->isUpdated(Properties::ID::WHITE_BALANCE)) {
+      switch (ctrl->getWbmode()) {
         case NvManualCamAwbMode_Off:
-          l_iAutoControlSettings_ptr->setAwbMode(AWB_MODE_OFF);
+          ctx->iAutoSettings->setAwbMode(AWB_MODE_OFF);
           break;
         case NvManualCamAwbMode_Auto:
-          l_iAutoControlSettings_ptr->setAwbMode(AWB_MODE_AUTO);
+          ctx->iAutoSettings->setAwbMode(AWB_MODE_AUTO);
           break;
         case NvManualCamAwbMode_Incandescent:
-          l_iAutoControlSettings_ptr->setAwbMode(AWB_MODE_INCANDESCENT);
+          ctx->iAutoSettings->setAwbMode(AWB_MODE_INCANDESCENT);
           break;
         case NvManualCamAwbMode_Fluorescent:
-          l_iAutoControlSettings_ptr->setAwbMode(AWB_MODE_FLUORESCENT);
+          ctx->iAutoSettings->setAwbMode(AWB_MODE_FLUORESCENT);
           break;
         case NvManualCamAwbMode_WarmFluorescent:
-          l_iAutoControlSettings_ptr->setAwbMode(AWB_MODE_WARM_FLUORESCENT);
+          ctx->iAutoSettings->setAwbMode(AWB_MODE_WARM_FLUORESCENT);
           break;
         case NvManualCamAwbMode_Daylight:
-          l_iAutoControlSettings_ptr->setAwbMode(AWB_MODE_DAYLIGHT);
+          ctx->iAutoSettings->setAwbMode(AWB_MODE_DAYLIGHT);
           break;
         case NvManualCamAwbMode_CloudyDaylight:
-          l_iAutoControlSettings_ptr->setAwbMode(AWB_MODE_CLOUDY_DAYLIGHT);
+          ctx->iAutoSettings->setAwbMode(AWB_MODE_CLOUDY_DAYLIGHT);
           break;
         case NvManualCamAwbMode_Twilight:
-          l_iAutoControlSettings_ptr->setAwbMode(AWB_MODE_TWILIGHT);
+          ctx->iAutoSettings->setAwbMode(AWB_MODE_TWILIGHT);
           break;
         case NvManualCamAwbMode_Shade:
-          l_iAutoControlSettings_ptr->setAwbMode(AWB_MODE_SHADE);
+          ctx->iAutoSettings->setAwbMode(AWB_MODE_SHADE);
           break;
         case NvManualCamAwbMode_Manual:
-          l_iAutoControlSettings_ptr->setAwbMode(AWB_MODE_MANUAL);
+          ctx->iAutoSettings->setAwbMode(AWB_MODE_MANUAL);
           break;
         default:
-          l_iAutoControlSettings_ptr->setAwbMode(AWB_MODE_OFF);
+          ctx->iAutoSettings->setAwbMode(AWB_MODE_OFF);
           break;
       }
-      src->wbPropSet = FALSE;
-      l_iCaptureSession->repeat(l_captureRequest);
+      ctx->repeat_request();
     }
 
-    if (src->saturationPropSet) {
-      l_iAutoControlSettings_ptr->setColorSaturationEnable(TRUE);
-      l_iAutoControlSettings_ptr->setColorSaturation(src->controls.saturation);
-      l_iCaptureSession->repeat(l_captureRequest);
-      src->saturationPropSet = FALSE;
+    if (ctrl->isUpdated(Properties::ID::SATURATION)) {
+      ctx->iAutoSettings->setColorSaturationEnable(true);
+      ctx->iAutoSettings->setColorSaturation(ctrl->getSaturation());
+      ctx->repeat_request();
     }
 
-    if (src->exposureCompensationPropSet) {
-      l_iAutoControlSettings_ptr->setExposureCompensation(
-          src->controls.ExposureCompensation);
-      l_iCaptureSession->repeat(l_captureRequest);
-      src->exposureCompensationPropSet = FALSE;
+    if (ctrl->isUpdated(Properties::ID::EXP_COMPENSATION)) {
+      ctx->iAutoSettings->setExposureCompensation(ctrl->getExpCompensation());
+      ctx->repeat_request();
     }
 
-    if (src->aeLockPropSet) {
-      if (src->controls.AeLock)
-        l_iAutoControlSettings_ptr->setAeLock(true);
-      else
-        l_iAutoControlSettings_ptr->setAeLock(false);
-      l_iCaptureSession->repeat(l_captureRequest);
-      src->aeLockPropSet = FALSE;
+    if (ctrl->isUpdated(Properties::ID::AE_LOCK)) {
+      ctx->iAutoSettings->setAeLock(ctrl->getAeLock());
+      ctx->repeat_request();
     }
 
-    if (src->awbLockPropSet) {
-      if (src->controls.AwbLock)
-        l_iAutoControlSettings_ptr->setAwbLock(true);
-      else
-        l_iAutoControlSettings_ptr->setAwbLock(false);
-      l_iCaptureSession->repeat(l_captureRequest);
-      src->awbLockPropSet = FALSE;
+    if (ctrl->isUpdated(Properties::ID::AWB_LOCK)) {
+      ctx->iAutoSettings->setAwbLock(ctrl->getAwbLock());
+      ctx->repeat_request();
     }
 
-    if (src->tnrModePropSet) {
-      switch (src->controls.NoiseReductionMode) {
+    if (ctrl->isUpdated(Properties::ID::TNR_MODE)) {
+      switch (ctrl->getTnrMode()) {
         case NvManualCamNoiseReductionMode_Off:
-          l_iDenoiseSettings_ptr->setDenoiseMode(DENOISE_MODE_OFF);
+          ctx->iDenoiseSettings->setDenoiseMode(DENOISE_MODE_OFF);
           break;
         case NvManualCamNoiseReductionMode_Fast:
-          l_iDenoiseSettings_ptr->setDenoiseMode(DENOISE_MODE_FAST);
+          ctx->iDenoiseSettings->setDenoiseMode(DENOISE_MODE_FAST);
           break;
         case NvManualCamNoiseReductionMode_HighQuality:
-          l_iDenoiseSettings_ptr->setDenoiseMode(DENOISE_MODE_HIGH_QUALITY);
+          ctx->iDenoiseSettings->setDenoiseMode(DENOISE_MODE_HIGH_QUALITY);
           break;
         default:
-          l_iDenoiseSettings_ptr->setDenoiseMode(DENOISE_MODE_OFF);
+          ctx->iDenoiseSettings->setDenoiseMode(DENOISE_MODE_OFF);
           break;
       }
-      l_iCaptureSession->repeat(l_captureRequest);
-      src->tnrModePropSet = FALSE;
+      ctx->repeat_request();
     }
 
-    if (src->tnrStrengthPropSet) {
-      l_iDenoiseSettings_ptr->setDenoiseStrength(
-          src->controls.NoiseReductionStrength);
-      l_iCaptureSession->repeat(l_captureRequest);
-      src->tnrStrengthPropSet = FALSE;
+    if (ctrl->isUpdated(Properties::ID::TNR_STRENGTH)) {
+      ctx->iDenoiseSettings->setDenoiseStrength(ctrl->getTnrStrength());
+      ctx->repeat_request();
     }
 
-    if (src->edgeEnhancementModePropSet) {
-      switch (src->controls.EdgeEnhancementMode) {
+    if (ctrl->isUpdated(Properties::ID::EE_MODE)) {
+      switch (ctrl->getEeMode()) {
         case NvManualCamEdgeEnhancementMode_Off:
-          l_iEeSettings_ptr->setEdgeEnhanceMode(EDGE_ENHANCE_MODE_OFF);
+          ctx->iEeSettings->setEdgeEnhanceMode(EDGE_ENHANCE_MODE_OFF);
           break;
         case NvManualCamEdgeEnhancementMode_Fast:
-          l_iEeSettings_ptr->setEdgeEnhanceMode(EDGE_ENHANCE_MODE_FAST);
+          ctx->iEeSettings->setEdgeEnhanceMode(EDGE_ENHANCE_MODE_FAST);
           break;
         case NvManualCamEdgeEnhancementMode_HighQuality:
-          l_iEeSettings_ptr->setEdgeEnhanceMode(EDGE_ENHANCE_MODE_HIGH_QUALITY);
+          ctx->iEeSettings->setEdgeEnhanceMode(EDGE_ENHANCE_MODE_HIGH_QUALITY);
           break;
         default:
-          l_iEeSettings_ptr->setEdgeEnhanceMode(EDGE_ENHANCE_MODE_OFF);
+          GST_ERROR("INVALID EE MODE!");
           break;
       }
-      l_iCaptureSession->repeat(l_captureRequest);
-      src->edgeEnhancementModePropSet = FALSE;
+      ctx->repeat_request();
     }
 
-    if (src->edgeEnhancementStrengthPropSet) {
-      l_iEeSettings_ptr->setEdgeEnhanceStrength(
-          src->controls.EdgeEnhancementStrength);
-      l_iCaptureSession->repeat(l_captureRequest);
-      src->edgeEnhancementStrengthPropSet = FALSE;
+    if (ctrl->isUpdated(Properties::ID::EE_STRENGTH)) {
+      ctx->iEeSettings->setEdgeEnhanceStrength(ctrl->getEeStrength());
+      ctx->repeat_request();
     }
 
-    if (src->aeAntibandingPropSet) {
-      switch (src->controls.AeAntibandingMode) {
+    if (ctrl->isUpdated(Properties::ID::AEANTIBANDING_MODE)) {
+      switch (ctrl->getAeantibandingMode()) {
         case NvManualCamAeAntibandingMode_Off:
-          l_iAutoControlSettings_ptr->setAeAntibandingMode(
-              AE_ANTIBANDING_MODE_OFF);
+          ctx->iAutoSettings->setAeAntibandingMode(AE_ANTIBANDING_MODE_OFF);
           break;
         case NvManualCamAeAntibandingMode_Auto:
-          l_iAutoControlSettings_ptr->setAeAntibandingMode(
-              AE_ANTIBANDING_MODE_AUTO);
+          ctx->iAutoSettings->setAeAntibandingMode(AE_ANTIBANDING_MODE_AUTO);
           break;
         case NvManualCamAeAntibandingMode_50HZ:
-          l_iAutoControlSettings_ptr->setAeAntibandingMode(
-              AE_ANTIBANDING_MODE_50HZ);
+          ctx->iAutoSettings->setAeAntibandingMode(AE_ANTIBANDING_MODE_50HZ);
           break;
         case NvManualCamAeAntibandingMode_60HZ:
-          l_iAutoControlSettings_ptr->setAeAntibandingMode(
-              AE_ANTIBANDING_MODE_60HZ);
+          ctx->iAutoSettings->setAeAntibandingMode(AE_ANTIBANDING_MODE_60HZ);
           break;
         default:
-          l_iAutoControlSettings_ptr->setAeAntibandingMode(
-              AE_ANTIBANDING_MODE_OFF);
+          GST_ERROR("INVALID AE MODE!");
           break;
       }
-      l_iCaptureSession->repeat(l_captureRequest);
-      src->aeAntibandingPropSet = FALSE;
+      ctx->repeat_request();
     }
 
-    if (src->gainPropSet) {
-      sensorModeAnalogGainRange.min() = src->controls.gain;
-      sensorModeAnalogGainRange.max() = src->controls.gain;
-      l_iRequestSourceSettings_ptr->setGainRange(sensorModeAnalogGainRange);
-      l_iCaptureSession->repeat(l_captureRequest);
-      src->gainPropSet = false;
+    if (ctrl->isUpdated(Properties::ID::GAIN)) {
+      thread_local Argus::Range<float> range;
+      range.min() = ctrl->getGain();
+      range.max() = range.min();
+      ctx->iSourceSettings->setGainRange(range);
+      ctx->repeat_request();
     }
 
-    if (src->ispDigitalGainPropSet) {
-      ispDigitalGainRange.min() = src->controls.digital_gain;
-      ispDigitalGainRange.max() = src->controls.digital_gain;
-      l_iAutoControlSettings_ptr->setIspDigitalGainRange(ispDigitalGainRange);
-      l_iCaptureSession->repeat(l_captureRequest);
-      src->ispDigitalGainPropSet = false;
+    if (ctrl->isUpdated(Properties::ID::DIGITAL_GAIN)) {
+      thread_local Argus::Range<float> range;
+      range.min() = ctrl->getDigitalGain();
+      range.max() = range.min();
+      ctx->iAutoSettings->setIspDigitalGainRange(range);
+      ctx->repeat_request();
     }
 
-    if (src->exposureTimePropSet == TRUE) {
-      limitExposureTimeRange.min() = src->controls.exposure_real;
-      limitExposureTimeRange.max() = src->controls.exposure_real;
-      l_iRequestSourceSettings_ptr->setExposureTimeRange(
-          limitExposureTimeRange);
-      l_iCaptureSession->repeat(l_captureRequest);
-      src->exposureTimePropSet = false;
+    if (ctrl->isUpdated(Properties::ID::EXPOSURE_REAL)) {
+      thread_local Argus::Range<uint64_t> range;
+      range.min() = ctrl->getExposureReal();
+      range.max() = range.min();
+      ctx->iSourceSettings->setExposureTimeRange(range);
+      ctx->repeat_request();
     }
 
-    // Use the IFrame interface to print out the frame number/timestamp, and
-    // to provide access to the Image in the Frame.
+    // Get a frame
+    UniqueObj<Frame> frame(ctx->iFrameConsumer.acquireFrame(-1, &err));
     IFrame* iFrame = interface_cast<IFrame>(frame);
-    if (!iFrame)
-      ORIGINATE_ERROR("Failed to get IFrame interface.");
-
-    // Get the IImageNativeBuffer extension interface and create the fd.
-    NV::IImageNativeBuffer* iNativeBuffer =
-        Argus::interface_cast<NV::IImageNativeBuffer>(iFrame->getImage());
-    if (!iNativeBuffer)
-      ORIGINATE_ERROR("IImageNativeBuffer not supported by Image.");
-
-    if (src->frameInfo->fd < 0) {
-      src->frameInfo->fd = iNativeBuffer->createNvBuffer(
-          streamSize, NvBufferColorFormat_YUV420, NvBufferLayout_BlockLinear);
-      if (!src->silent)
-        GST_INFO("Acquired Frame. %d", src->frameInfo->fd);
-    } else if (iNativeBuffer->copyToNvBuffer(src->frameInfo->fd) != STATUS_OK) {
-      ORIGINATE_ERROR("IImageNativeBuffer not supported by Image.");
+    if (!iFrame) {
+      ORIGINATE_ERROR("Failed to get Frame (Status %d).", err);
     }
 
-    if (!src->silent)
-      GST_INFO("Acquired Frame: %llu, time %llu",
-               static_cast<unsigned long long>(iFrame->getNumber()),
-               static_cast<unsigned long long>(iFrame->getTime()));
-
-    src->frameInfo->frameNum = iFrame->getNumber();
-    src->frameInfo->frameTime = iFrame->getTime();
-
-    // Attach capture metadata to frameInfo
-    // TODO(mdegans): research gstreamer frame level metadata to see if there is
-    //  a better way to do this.
-    if (src->controls.meta_enabled) {
+    if (ctrl->isUpdated(Properties::ID::META_ENABLED)) {
       auto iArgusCaptureMetadata =
           Argus::interface_cast<IArgusCaptureMetadata>(frame);
       if (!iArgusCaptureMetadata) {
@@ -315,8 +229,37 @@ bool Consumer::threadExecute(GstNvManualCameraSrc* src) {
       if (!meta) {
         ORIGINATE_ERROR("Could not get Argus::CaptureMetadata");
       }
-      src->frameInfo->metadata = nvmanualcam::Metadata::create(meta);
+      frameInfo.metadata = nvmanualcam::Metadata::create(meta);
     }
+
+    // Get the IImageNativeBuffer extension interface and create the fd.
+    NV::IImageNativeBuffer* iNativeBuffer =
+        Argus::interface_cast<NV::IImageNativeBuffer>(iFrame->getImage());
+    if (!iNativeBuffer) {
+      ORIGINATE_ERROR("IImageNativeBuffer not supported by Image.");
+    }
+
+    if (frameInfo.fd < 0) {
+      frameInfo.fd = iNativeBuffer->createNvBuffer(
+          resolution, NvBufferColorFormat_YUV420, NvBufferLayout_BlockLinear);
+      if (!ctrl->getSilent()) {
+        GST_INFO("Acquired Frame. %d", src->frameInfo->fd);
+      }
+    } else if (iNativeBuffer->copyToNvBuffer(frameInfo.fd) != STATUS_OK) {
+      ORIGINATE_ERROR("IImageNativeBuffer not supported by Image.");
+    }
+
+    frameInfo.frameNum = iFrame->getNumber();
+    frameInfo.frameTime = iFrame->getTime();
+
+    if (!ctrl->getSilent()) {
+      GST_INFO("Acquired Frame: %" PRIu64 ", time %" PRIu64, frameInfo.frameNum,
+               frameInfo.frameTime);
+    }
+
+    // Attach capture metadata to frameInfo
+    // TODO(mdegans): research gstreamer frame level metadata to see if there is
+    //  a better way to do this.
 
     g_mutex_lock(&src->manual_buffers_queue_lock);
     g_queue_push_tail(src->manual_buffers, (src->frameInfo));
@@ -331,10 +274,6 @@ bool Consumer::threadExecute(GstNvManualCameraSrc* src) {
     g_mutex_unlock(&src->manual_buffer_consumed_lock);
   }
 
-  g_slice_free(NvManualFrameInfo, src->frameInfo);
-  if (!src->in_error) {
-    GST_INFO("Done Success");
-  }
   PROPAGATE_ERROR(requestShutdown());
   return true;
 }
@@ -344,4 +283,4 @@ bool Consumer::threadShutdown(GstNvManualCameraSrc* src) {
   return true;
 }
 
-}  // namespace nvmanualcam::utils
+}  // namespace nvmanualcam::consumer

@@ -44,4 +44,36 @@
 #include "gstnvmanualcamera_config_make.h"
 #endif
 
+namespace nvmanualcam::defaults {
+
+const int DEFAULT_FPS = 30;       // mostly ignored, deprecated
+const int DEFAULT_HEIGHT = 1080;  // mostly ignored, deprecated
+const int DEFAULT_WIDTH = 1920;   // mostly ignored, deprecated
+
+const auto AEANTIBANDING_MODE = NvManualCamAeAntibandingMode_Off;
+const auto EE_MODE = NvManualCamEdgeEnhancementMode_Off;
+const auto TNR_MODE = NvManualCamNoiseReductionMode_Off;
+const auto WB_MODE = NvManualCamAwbMode_Auto;
+const bool AE_LOCK = false;
+const bool AWB_LOCK = false;
+const bool BAYER_SHARPNESS_MAP = false;
+const bool BUF_API = false;
+const bool METADATA = true;
+const bool SILENT = false;
+const bool SILENT = false;
+const float DIGITAL_GAIN = 1.0f;
+const float EE_STRENGTH = -1.0;
+const float EXP_COMPENSATION = 0.0;
+const float EXPOSURE_TIME = 1.0;
+const float GAIN = 1.0f;
+const float SATURATION = 1.0;
+const float TNR_STRENGTH = -1.0;
+const int SENSOR_MODE_STATE = -1;
+const uint SENSOR_ID = 0;
+const uint TIMEOUT = 0;
+const uint TIMEOUT = 0;
+const uint TOTAL_SENSOR_MODES = 0;
+
+}  // namespace nvmanualcam::defaults
+
 #endif /* A6479C9D_8364_49AA_B5B3_889C52B6889D */

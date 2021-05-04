@@ -32,7 +32,8 @@
 #include "stoppable_thread.hpp"
 
 #include <Argus/Argus.h>
-#include <EGLStream/FrameConsumer.h>
+
+struct ArgusCtx;
 
 namespace nvmanualcam::utils {
 
@@ -43,18 +44,18 @@ namespace nvmanualcam::utils {
  ******************************************************************************/
 class Consumer : public nvmanualcam::utils::StoppableThread {
  public:
-  explicit Consumer(Argus::OutputStream* stream) : m_stream(stream) {}
+  explicit Consumer(std::shared_ptr<ArgusCtx> ctx) : m_ctx(ctx) {}
   ~Consumer() {}
 
  private:
   /** @name Thread methods */
   /**@{*/
-  virtual bool threadInitialize(GstNvManualCameraSrc*);
-  virtual bool threadExecute(GstNvManualCameraSrc*);
-  virtual bool threadShutdown(GstNvManualCameraSrc*);
+  virtual bool threadInitialize();
+  virtual bool threadExecute();
+  virtual bool threadShutdown();
   /**@}*/
 
-  Argus::OutputStream* m_stream;
+  std::shared_ptr<ArgusCtx> m_ctx;
   // GstNvManualCameraSrc *manual_src;
   Argus::UniqueObj<EGLStream::FrameConsumer> m_consumer;
 };
