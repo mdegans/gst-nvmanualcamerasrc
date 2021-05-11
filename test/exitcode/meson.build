@@ -29,6 +29,12 @@ tests = [
     'suites': ['integration'],
   },
   {
+    'description': 'test properties',
+    'filename': 'test_properties',
+    'sources': ['test_properties.cpp'],
+    'suites': ['integration'],
+  },
+  {
     'description': 'demo sharpness',
     'filename': 'demo_sharpness',
     'sources': ['demo_sharpness.cpp'],
