@@ -40,6 +40,12 @@ tests = [
     'sources': ['demo_sharpness.cpp'],
     'suites': ['interactive'],
   },
+  {
+    'description': 'demo sharpness_overlay',
+    'filename': 'demo_sharpness_overlay',
+    'sources': ['demo_sharpness_overlay.cpp'],
+    'suites': ['interactive'],
+  },
 ]
 
 # build tests (and optionally execute them)
