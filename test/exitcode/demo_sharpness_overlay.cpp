@@ -11,6 +11,7 @@
 #include <memory>
 #include <sstream>
 #include <string>
+#include <limits>
 
 // set how many frames you want for the demo here
 static const int NUM_FRAMES = std::numeric_limits<int32_t>::max();
