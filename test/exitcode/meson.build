@@ -35,6 +35,12 @@ tests = [
     'suites': ['integration'],
   },
   {
+    'description': 'test string pipeline',
+    'filename': 'test_string_pipeline',
+    'sources': ['test_string_pipeline.cpp'],
+    'suites': ['integration'],
+  },
+  {
     'description': 'demo sharpness',
     'filename': 'demo_sharpness',
     'sources': ['demo_sharpness.cpp'],
