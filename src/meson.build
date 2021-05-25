@@ -41,7 +41,10 @@ gstnvmanualcamerasrc_deps = [
   # glib-2.0 is implied by above
   cc.find_library('nvbuf_utils', dirs: lib_install_dir),
   cc.find_library('nvdsbufferpool', dirs: lib_install_dir),
-  cc.find_library('nvargus', dirs: lib_install_dir),
+  # cc.find_library('nvargus', dirs: lib_install_dir),
+  # many thanks @danelll of Nvidia DevTalk Forum
+  # Replace -largus with -largus_socketclient.
+  cc.find_library('nvargus_socketclient', dirs: lib_install_dir),
   # https://mesonbuild.com/howtox.html
   # "Lots of people seem to do this manually with find_library('pthread') or 
   # something similar. Do not do that. It is not portable. Instead do this."
