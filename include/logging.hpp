@@ -25,31 +25,64 @@
 #include <gst/gst.h>
 
 /**
- * @brief If the return of `statement` is nonzero, logs the returned code with
- * GST_ERROR and returns false.
+ * @brief If the return of `stmt` is nonzero, logs the returned code with
+ * GST_ERROR.
  *
  */
-#define NONZERO_ERROR(statement)           \
-  do {                                     \
-    auto status = statement;               \
-    while (status) {                       \
-      GST_ERROR("Error code:%d:", status); \
-      return false;                        \
-    }                                      \
+#define NONZERO_ERROR(stmt)                            \
+  do {                                                 \
+    auto code = (stmt);                                \
+    while (code) {                                     \
+      GST_ERROR("ERROR: %s returned (code:%d)", #stmt, \
+                static_cast<int>(code));               \
+      break;                                           \
+    }                                                  \
   } while (0)
 
 /**
- * @brief If the return of `statement` is nonzero, logs the returned code with
- * GST_WARNING and returns false.
+ * @brief If the return of `stmt` is nonzero, logs the returned code with
+ * GST_ERROR and returns false.
  *
  */
-#define NONZERO_WARNING(statement)           \
-  do {                                       \
-    auto status = statement;                 \
-    while (status) {                         \
-      GST_WARNING("Error code:%d:", status); \
-      break;                                 \
-    }                                        \
+#define NONZERO_RETURN_FALSE(stmt)                     \
+  do {                                                 \
+    auto code = (stmt);                                \
+    while (code) {                                     \
+      GST_ERROR("ERROR: %s returned (code:%d)", #stmt, \
+                static_cast<int>(code));               \
+      return false;                                    \
+    }                                                  \
+  } while (0)
+
+/**
+ * @brief If the return of `stmt` is nonzero, logs the returned code with
+ * GST_ERROR and returns false.
+ *
+ */
+#define NONZERO_PANIC(stmt)                            \
+  do {                                                 \
+    auto code = (stmt);                                \
+    while (code) {                                     \
+      GST_ERROR("FATAL: %s returned (code:%d)", #stmt, \
+                static_cast<int>(code));               \
+      std::terminate();                                \
+      break;                                           \
+    }                                                  \
+  } while (0)
+
+/**
+ * @brief If the return of `stmt` is nonzero, logs the returned code with
+ * GST_WARNING.
+ *
+ */
+#define NONZERO_WARNING(stmt)                            \
+  do {                                                   \
+    auto code = (stmt);                                  \
+    while (code) {                                       \
+      GST_WARNING("ERROR: %s returned (code:%d)", #stmt, \
+                  static_cast<int>(code));               \
+      break;                                             \
+    }                                                    \
   } while (0)
 
 #endif /* C7D133B0_CD0B_4AE7_98E3_DBA51825D323 */

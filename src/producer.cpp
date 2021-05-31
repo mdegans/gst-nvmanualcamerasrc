@@ -45,15 +45,6 @@ GST_DEBUG_CATEGORY_STATIC(gst_nvmanualcamerasrc_producer_debug);
 
 using namespace Argus;
 
-// https://stackoverflow.com/questions/14038589/what-is-the-canonical-way-to-check-for-errors-using-the-cuda-runtime-api
-#define argusCheck(code) \
-  { argusAssert((code), __FILE__, __LINE__); }
-inline void argusAssert(Argus::Status code, const char* file, int line) {
-  if (code != Argus::Status::STATUS_OK) {
-    GST_ERROR("Argus Error: %d %s:%d\n", code, file, line);
-  }
-}
-
 namespace nvmanualcam {
 
 bool producer(int32_t cameraIndex,
@@ -92,7 +83,7 @@ bool producer(int32_t cameraIndex,
   // Create the capture session using the specified device.
   UniqueObj<CaptureSession> captureSession(
       iCameraProvider->createCaptureSession(cameraDevices[cameraIndex], &err));
-  argusCheck(err);
+  NONZERO_RETURN_FALSE(err);
   ICaptureSession* iCaptureSession =
       interface_cast<ICaptureSession>(captureSession);
   if (!iCaptureSession)
@@ -102,22 +93,23 @@ bool producer(int32_t cameraIndex,
   GST_INFO("Creating output stream");
   UniqueObj<OutputStreamSettings> streamSettings(
       iCaptureSession->createOutputStreamSettings(STREAM_TYPE_EGL, &err));
-  argusCheck(err);
+  NONZERO_RETURN_FALSE(err);
   IEGLOutputStreamSettings* iStreamSettings =
       interface_cast<IEGLOutputStreamSettings>(streamSettings);
   if (iStreamSettings) {
-    argusCheck(iStreamSettings->setPixelFormat(PIXEL_FMT_YCbCr_420_888));
-    argusCheck(iStreamSettings->setResolution(streamSize));
+    NONZERO_RETURN_FALSE(
+        iStreamSettings->setPixelFormat(PIXEL_FMT_YCbCr_420_888));
+    NONZERO_RETURN_FALSE(iStreamSettings->setResolution(streamSize));
     if (src->controls.meta_enabled) {
       GST_INFO("Enabling metadata.");
-      argusCheck(iStreamSettings->setMetadataEnable(true));
+      NONZERO_RETURN_FALSE(iStreamSettings->setMetadataEnable(true));
     } else {
       GST_INFO("Metadata not enabled.");
     }
   }
   UniqueObj<OutputStream> outputStream(
       iCaptureSession->createOutputStream(streamSettings.get(), &err));
-  argusCheck(err);
+  NONZERO_RETURN_FALSE(err);
   IEGLOutputStream* iStream = interface_cast<IEGLOutputStream>(outputStream);
   if (!iStream)
     ORIGINATE_ERROR("Failed to create OutputStream");
@@ -131,12 +123,12 @@ bool producer(int32_t cameraIndex,
   // Create capture request and enable output stream.
   UniqueObj<Request> request(
       iCaptureSession->createRequest(CAPTURE_INTENT_MANUAL, &err));
-  argusCheck(err);
+  NONZERO_RETURN_FALSE(err);
   IRequest* iRequest = interface_cast<IRequest>(request);
   src->iRequest_ptr = iRequest;
   if (!iRequest)
     ORIGINATE_ERROR("Failed to create Request");
-  argusCheck(iRequest->enableOutputStream(outputStream.get()));
+  NONZERO_RETURN_FALSE(iRequest->enableOutputStream(outputStream.get()));
 
   IAutoControlSettings* iAutoControlSettings =
       interface_cast<IAutoControlSettings>(iRequest->getAutoControlSettings());
@@ -146,7 +138,7 @@ bool producer(int32_t cameraIndex,
       interface_cast<ICameraProperties>(cameraDevices[cameraIndex]);
   if (!camProps)
     ORIGINATE_ERROR("Failed to create camera properties");
-  argusCheck(camProps->getAllSensorModes(&modes));
+  NONZERO_RETURN_FALSE(camProps->getAllSensorModes(&modes));
 
   ISourceSettings* requestSourceSettings =
       interface_cast<ISourceSettings>(iRequest->getSourceSettings());
@@ -256,13 +248,14 @@ bool producer(int32_t cameraIndex,
   if (src->tnrModePropSet) {
     switch (src->controls.NoiseReductionMode) {
       case NvManualCamNoiseReductionMode_Off:
-        argusCheck(denoiseSettings->setDenoiseMode(DENOISE_MODE_OFF));
+        NONZERO_ERROR(denoiseSettings->setDenoiseMode(DENOISE_MODE_OFF));
         break;
       case NvManualCamNoiseReductionMode_Fast:
-        argusCheck(denoiseSettings->setDenoiseMode(DENOISE_MODE_FAST));
+        NONZERO_ERROR(denoiseSettings->setDenoiseMode(DENOISE_MODE_FAST));
         break;
       case NvManualCamNoiseReductionMode_HighQuality:
-        argusCheck(denoiseSettings->setDenoiseMode(DENOISE_MODE_HIGH_QUALITY));
+        NONZERO_ERROR(
+            denoiseSettings->setDenoiseMode(DENOISE_MODE_HIGH_QUALITY));
         break;
       default:
         GST_ERROR("src->controls.NoiseReductionMode invalid");
@@ -280,13 +273,13 @@ bool producer(int32_t cameraIndex,
   if (src->edgeEnhancementModePropSet) {
     switch (src->controls.EdgeEnhancementMode) {
       case NvManualCamEdgeEnhancementMode_Off:
-        argusCheck(eeSettings->setEdgeEnhanceMode(EDGE_ENHANCE_MODE_OFF));
+        NONZERO_ERROR(eeSettings->setEdgeEnhanceMode(EDGE_ENHANCE_MODE_OFF));
         break;
       case NvManualCamEdgeEnhancementMode_Fast:
-        argusCheck(eeSettings->setEdgeEnhanceMode(EDGE_ENHANCE_MODE_FAST));
+        NONZERO_ERROR(eeSettings->setEdgeEnhanceMode(EDGE_ENHANCE_MODE_FAST));
         break;
       case NvManualCamEdgeEnhancementMode_HighQuality:
-        argusCheck(
+        NONZERO_ERROR(
             eeSettings->setEdgeEnhanceMode(EDGE_ENHANCE_MODE_HIGH_QUALITY));
         break;
       default:
@@ -297,7 +290,7 @@ bool producer(int32_t cameraIndex,
   }
 
   if (src->edgeEnhancementStrengthPropSet) {
-    argusCheck(eeSettings->setEdgeEnhanceStrength(
+    NONZERO_ERROR(eeSettings->setEdgeEnhanceStrength(
         src->controls.EdgeEnhancementStrength));
     src->edgeEnhancementStrengthPropSet = FALSE;
   }
@@ -306,19 +299,19 @@ bool producer(int32_t cameraIndex,
   if (src->aeAntibandingPropSet) {
     switch (src->controls.AeAntibandingMode) {
       case NvManualCamAeAntibandingMode_Off:
-        argusCheck(iAutoControlSettings->setAeAntibandingMode(
+        NONZERO_ERROR(iAutoControlSettings->setAeAntibandingMode(
             AE_ANTIBANDING_MODE_OFF));
         break;
       case NvManualCamAeAntibandingMode_Auto:
-        argusCheck(iAutoControlSettings->setAeAntibandingMode(
+        NONZERO_ERROR(iAutoControlSettings->setAeAntibandingMode(
             AE_ANTIBANDING_MODE_AUTO));
         break;
       case NvManualCamAeAntibandingMode_50HZ:
-        argusCheck(iAutoControlSettings->setAeAntibandingMode(
+        NONZERO_ERROR(iAutoControlSettings->setAeAntibandingMode(
             AE_ANTIBANDING_MODE_50HZ));
         break;
       case NvManualCamAeAntibandingMode_60HZ:
-        argusCheck(iAutoControlSettings->setAeAntibandingMode(
+        NONZERO_ERROR(iAutoControlSettings->setAeAntibandingMode(
             AE_ANTIBANDING_MODE_60HZ));
         break;
       default:
@@ -329,22 +322,17 @@ bool producer(int32_t cameraIndex,
   }
 
   if (src->exposureCompensationPropSet) {
-    err = iAutoControlSettings->setExposureCompensation(
-        src->controls.ExposureCompensation);
-    if (err) {
-      GST_WARNING_OBJECT(
-          src, "unable to set exposure compensation to %ld (status %d)",
-          src->controls.exposure_real, err);
-    }
+    NONZERO_ERROR(iAutoControlSettings->setExposureCompensation(
+        src->controls.ExposureCompensation));
     src->exposureCompensationPropSet = FALSE;
   }
 
   /* Setting auto white balance lock */
   if (src->awbLockPropSet) {
     if (src->controls.AwbLock) {
-      argusCheck(iAutoControlSettings->setAwbLock(true));
+      NONZERO_ERROR(iAutoControlSettings->setAwbLock(true));
     } else {
-      argusCheck(iAutoControlSettings->setAwbLock(false));
+      NONZERO_ERROR(iAutoControlSettings->setAwbLock(false));
     }
     src->awbLockPropSet = FALSE;
   }
@@ -352,12 +340,9 @@ bool producer(int32_t cameraIndex,
   /* Setting auto exposure lock */
   if (src->aeLockPropSet) {
     if (src->controls.AeLock)
-      err = iAutoControlSettings->setAeLock(true);
+      NONZERO_ERROR(iAutoControlSettings->setAeLock(true));
     else
-      err = iAutoControlSettings->setAeLock(false);
-    if (err) {
-      GST_WARNING_OBJECT(src, "unable to set ae lock (status %d)", err);
-    }
+      NONZERO_ERROR(iAutoControlSettings->setAeLock(false));
     src->aeLockPropSet = FALSE;
   }
 
@@ -376,34 +361,36 @@ bool producer(int32_t cameraIndex,
   if (src->wbPropSet) {
     switch (src->controls.wbmode) {
       case NvManualCamAwbMode_Off:
-        argusCheck(iAutoControlSettings->setAwbMode(AWB_MODE_OFF));
+        NONZERO_ERROR(iAutoControlSettings->setAwbMode(AWB_MODE_OFF));
         break;
       case NvManualCamAwbMode_Auto:
-        argusCheck(iAutoControlSettings->setAwbMode(AWB_MODE_AUTO));
+        NONZERO_ERROR(iAutoControlSettings->setAwbMode(AWB_MODE_AUTO));
         break;
       case NvManualCamAwbMode_Incandescent:
-        argusCheck(iAutoControlSettings->setAwbMode(AWB_MODE_INCANDESCENT));
+        NONZERO_ERROR(iAutoControlSettings->setAwbMode(AWB_MODE_INCANDESCENT));
         break;
       case NvManualCamAwbMode_Fluorescent:
-        argusCheck(iAutoControlSettings->setAwbMode(AWB_MODE_FLUORESCENT));
+        NONZERO_ERROR(iAutoControlSettings->setAwbMode(AWB_MODE_FLUORESCENT));
         break;
       case NvManualCamAwbMode_WarmFluorescent:
-        argusCheck(iAutoControlSettings->setAwbMode(AWB_MODE_WARM_FLUORESCENT));
+        NONZERO_ERROR(
+            iAutoControlSettings->setAwbMode(AWB_MODE_WARM_FLUORESCENT));
         break;
       case NvManualCamAwbMode_Daylight:
-        argusCheck(iAutoControlSettings->setAwbMode(AWB_MODE_DAYLIGHT));
+        NONZERO_ERROR(iAutoControlSettings->setAwbMode(AWB_MODE_DAYLIGHT));
         break;
       case NvManualCamAwbMode_CloudyDaylight:
-        argusCheck(iAutoControlSettings->setAwbMode(AWB_MODE_CLOUDY_DAYLIGHT));
+        NONZERO_ERROR(
+            iAutoControlSettings->setAwbMode(AWB_MODE_CLOUDY_DAYLIGHT));
         break;
       case NvManualCamAwbMode_Twilight:
-        argusCheck(iAutoControlSettings->setAwbMode(AWB_MODE_TWILIGHT));
+        NONZERO_ERROR(iAutoControlSettings->setAwbMode(AWB_MODE_TWILIGHT));
         break;
       case NvManualCamAwbMode_Shade:
-        argusCheck(iAutoControlSettings->setAwbMode(AWB_MODE_SHADE));
+        NONZERO_ERROR(iAutoControlSettings->setAwbMode(AWB_MODE_SHADE));
         break;
       case NvManualCamAwbMode_Manual:
-        argusCheck(iAutoControlSettings->setAwbMode(AWB_MODE_MANUAL));
+        NONZERO_ERROR(iAutoControlSettings->setAwbMode(AWB_MODE_MANUAL));
         break;
       default:
         GST_ERROR("src->controls.wbmode invalid");
@@ -414,8 +401,8 @@ bool producer(int32_t cameraIndex,
 
   /* Setting color saturation property */
   if (src->saturationPropSet) {
-    argusCheck(iAutoControlSettings->setColorSaturationEnable(TRUE));
-    argusCheck(
+    NONZERO_ERROR(iAutoControlSettings->setColorSaturationEnable(TRUE));
+    NONZERO_ERROR(
         iAutoControlSettings->setColorSaturation(src->controls.saturation));
     src->saturationPropSet = false;
   }
@@ -423,51 +410,35 @@ bool producer(int32_t cameraIndex,
   if (src->exposureTimePropSet) {
     limitExposureTimeRange.min() = src->controls.exposure_real;
     limitExposureTimeRange.max() = src->controls.exposure_real;
-    err = requestSourceSettings->setExposureTimeRange(limitExposureTimeRange);
-    if (err) {
-      GST_WARNING_OBJECT(src, "unable to set exposure time to %ld (status %d)",
-                         src->controls.exposure_real, err);
-    }
+    NONZERO_ERROR(
+        requestSourceSettings->setExposureTimeRange(limitExposureTimeRange));
     src->exposureTimePropSet = false;
   }
 
   if (src->gainPropSet) {
     sensorModeAnalogGainRange.min() = src->controls.gain;
     sensorModeAnalogGainRange.max() = src->controls.gain;
-    err = requestSourceSettings->setGainRange(sensorModeAnalogGainRange);
-    if (err) {
-      GST_WARNING_OBJECT(src, "unable to gain to %.4f (status %d)",
-                         src->controls.gain, err);
-    }
+    NONZERO_ERROR(
+        requestSourceSettings->setGainRange(sensorModeAnalogGainRange));
     src->gainPropSet = false;
   }
 
   if (src->ispDigitalGainPropSet) {
     ispDigitalGainRange.min() = src->controls.digital_gain;
     ispDigitalGainRange.max() = src->controls.digital_gain;
-    err = iAutoControlSettings->setIspDigitalGainRange(ispDigitalGainRange);
-    if (err) {
-      GST_WARNING_OBJECT(src, "unable to digital gain to %.4f (status %d)",
-                         src->controls.gain, err);
-    }
+    NONZERO_ERROR(
+        iAutoControlSettings->setIspDigitalGainRange(ispDigitalGainRange));
     src->ispDigitalGainPropSet = false;
   }
 
-  err = requestSourceSettings->setSensorMode(modes[cameraMode]);
-  if (err) {
-    GST_WARNING_OBJECT(src, "unable to sensor mode to %d (status %d)",
-                       cameraMode, err);
-  }
+  NONZERO_WARNING(requestSourceSettings->setSensorMode(modes[cameraMode]));
+
   if (!src->info.fps_n) {
     frameRate = defaults::DEFAULT_FPS;
   }
 
-  err = requestSourceSettings->setFrameDurationRange(
-      Range<uint64_t>(static_cast<uint64_t>(1e9 / frameRate)));
-  if (err != Argus::Status::STATUS_OK) {
-    GST_WARNING_OBJECT(src, "unable to frame duration to %ld (status %d)",
-                       static_cast<uint64_t>(1e9 / frameRate), err);
-  }
+  NONZERO_WARNING(requestSourceSettings->setFrameDurationRange(
+      Range<uint64_t>(static_cast<uint64_t>(1e9 / frameRate))));
 
   GST_INFO("Setup Complete, Starting captures for %d seconds", secToRun);
 
@@ -480,11 +451,11 @@ bool producer(int32_t cameraIndex,
 
   if (src->in_error) {
     GST_ERROR("InvalidState.");
-    argusCheck(iCaptureSession->cancelRequests());
+    NONZERO_ERROR(iCaptureSession->cancelRequests());
     src->timeout = 1;
   } else if (secToRun != 0) {
     sleep(secToRun);
-    argusCheck(iCaptureSession->cancelRequests());
+    NONZERO_ERROR(iCaptureSession->cancelRequests());
   } else {
     if (src->stop_requested == FALSE) {
       g_mutex_lock(&src->eos_lock);
@@ -496,7 +467,7 @@ bool producer(int32_t cameraIndex,
   GST_INFO("Cleaning up");
 
   iCaptureSession->stopRepeat();
-  argusCheck(iCaptureSession->waitForIdle());
+  NONZERO_ERROR(iCaptureSession->waitForIdle());
 
   // Destroy the output stream. This destroys the EGLStream which causes
   // the GL consumer acquire to fail and the consumer thread to end.
