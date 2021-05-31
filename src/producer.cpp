@@ -256,16 +256,16 @@ bool producer(int32_t cameraIndex,
   if (src->tnrModePropSet) {
     switch (src->controls.NoiseReductionMode) {
       case NvManualCamNoiseReductionMode_Off:
-        denoiseSettings->setDenoiseMode(DENOISE_MODE_OFF);
+        argusCheck(denoiseSettings->setDenoiseMode(DENOISE_MODE_OFF));
         break;
       case NvManualCamNoiseReductionMode_Fast:
-        denoiseSettings->setDenoiseMode(DENOISE_MODE_FAST);
+        argusCheck(denoiseSettings->setDenoiseMode(DENOISE_MODE_FAST));
         break;
       case NvManualCamNoiseReductionMode_HighQuality:
-        denoiseSettings->setDenoiseMode(DENOISE_MODE_HIGH_QUALITY);
+        argusCheck(denoiseSettings->setDenoiseMode(DENOISE_MODE_HIGH_QUALITY));
         break;
       default:
-        denoiseSettings->setDenoiseMode(DENOISE_MODE_OFF);
+        GST_ERROR("src->controls.NoiseReductionMode invalid");
         break;
     }
     src->tnrModePropSet = FALSE;
@@ -280,23 +280,25 @@ bool producer(int32_t cameraIndex,
   if (src->edgeEnhancementModePropSet) {
     switch (src->controls.EdgeEnhancementMode) {
       case NvManualCamEdgeEnhancementMode_Off:
-        eeSettings->setEdgeEnhanceMode(EDGE_ENHANCE_MODE_OFF);
+        argusCheck(eeSettings->setEdgeEnhanceMode(EDGE_ENHANCE_MODE_OFF));
         break;
       case NvManualCamEdgeEnhancementMode_Fast:
-        eeSettings->setEdgeEnhanceMode(EDGE_ENHANCE_MODE_FAST);
+        argusCheck(eeSettings->setEdgeEnhanceMode(EDGE_ENHANCE_MODE_FAST));
         break;
       case NvManualCamEdgeEnhancementMode_HighQuality:
-        eeSettings->setEdgeEnhanceMode(EDGE_ENHANCE_MODE_HIGH_QUALITY);
+        argusCheck(
+            eeSettings->setEdgeEnhanceMode(EDGE_ENHANCE_MODE_HIGH_QUALITY));
         break;
       default:
-        eeSettings->setEdgeEnhanceMode(EDGE_ENHANCE_MODE_OFF);
+        GST_ERROR("src->controls.EdgeEnhancementMode invalid");
         break;
     }
     src->edgeEnhancementModePropSet = FALSE;
   }
 
   if (src->edgeEnhancementStrengthPropSet) {
-    eeSettings->setEdgeEnhanceStrength(src->controls.EdgeEnhancementStrength);
+    argusCheck(eeSettings->setEdgeEnhanceStrength(
+        src->controls.EdgeEnhancementStrength));
     src->edgeEnhancementStrengthPropSet = FALSE;
   }
 
@@ -304,19 +306,23 @@ bool producer(int32_t cameraIndex,
   if (src->aeAntibandingPropSet) {
     switch (src->controls.AeAntibandingMode) {
       case NvManualCamAeAntibandingMode_Off:
-        iAutoControlSettings->setAeAntibandingMode(AE_ANTIBANDING_MODE_OFF);
+        argusCheck(iAutoControlSettings->setAeAntibandingMode(
+            AE_ANTIBANDING_MODE_OFF));
         break;
       case NvManualCamAeAntibandingMode_Auto:
-        iAutoControlSettings->setAeAntibandingMode(AE_ANTIBANDING_MODE_AUTO);
+        argusCheck(iAutoControlSettings->setAeAntibandingMode(
+            AE_ANTIBANDING_MODE_AUTO));
         break;
       case NvManualCamAeAntibandingMode_50HZ:
-        iAutoControlSettings->setAeAntibandingMode(AE_ANTIBANDING_MODE_50HZ);
+        argusCheck(iAutoControlSettings->setAeAntibandingMode(
+            AE_ANTIBANDING_MODE_50HZ));
         break;
       case NvManualCamAeAntibandingMode_60HZ:
-        iAutoControlSettings->setAeAntibandingMode(AE_ANTIBANDING_MODE_60HZ);
+        argusCheck(iAutoControlSettings->setAeAntibandingMode(
+            AE_ANTIBANDING_MODE_60HZ));
         break;
       default:
-        iAutoControlSettings->setAeAntibandingMode(AE_ANTIBANDING_MODE_OFF);
+        GST_ERROR("src->controls.AeAntibandingMode invalid");
         break;
     }
     src->aeAntibandingPropSet = FALSE;
@@ -335,10 +341,11 @@ bool producer(int32_t cameraIndex,
 
   /* Setting auto white balance lock */
   if (src->awbLockPropSet) {
-    if (src->controls.AwbLock)
-      iAutoControlSettings->setAwbLock(true);
-    else
-      iAutoControlSettings->setAwbLock(false);
+    if (src->controls.AwbLock) {
+      argusCheck(iAutoControlSettings->setAwbLock(true));
+    } else {
+      argusCheck(iAutoControlSettings->setAwbLock(false));
+    }
     src->awbLockPropSet = FALSE;
   }
 
@@ -369,37 +376,37 @@ bool producer(int32_t cameraIndex,
   if (src->wbPropSet) {
     switch (src->controls.wbmode) {
       case NvManualCamAwbMode_Off:
-        iAutoControlSettings->setAwbMode(AWB_MODE_OFF);
+        argusCheck(iAutoControlSettings->setAwbMode(AWB_MODE_OFF));
         break;
       case NvManualCamAwbMode_Auto:
-        iAutoControlSettings->setAwbMode(AWB_MODE_AUTO);
+        argusCheck(iAutoControlSettings->setAwbMode(AWB_MODE_AUTO));
         break;
       case NvManualCamAwbMode_Incandescent:
-        iAutoControlSettings->setAwbMode(AWB_MODE_INCANDESCENT);
+        argusCheck(iAutoControlSettings->setAwbMode(AWB_MODE_INCANDESCENT));
         break;
       case NvManualCamAwbMode_Fluorescent:
-        iAutoControlSettings->setAwbMode(AWB_MODE_FLUORESCENT);
+        argusCheck(iAutoControlSettings->setAwbMode(AWB_MODE_FLUORESCENT));
         break;
       case NvManualCamAwbMode_WarmFluorescent:
-        iAutoControlSettings->setAwbMode(AWB_MODE_WARM_FLUORESCENT);
+        argusCheck(iAutoControlSettings->setAwbMode(AWB_MODE_WARM_FLUORESCENT));
         break;
       case NvManualCamAwbMode_Daylight:
-        iAutoControlSettings->setAwbMode(AWB_MODE_DAYLIGHT);
+        argusCheck(iAutoControlSettings->setAwbMode(AWB_MODE_DAYLIGHT));
         break;
       case NvManualCamAwbMode_CloudyDaylight:
-        iAutoControlSettings->setAwbMode(AWB_MODE_CLOUDY_DAYLIGHT);
+        argusCheck(iAutoControlSettings->setAwbMode(AWB_MODE_CLOUDY_DAYLIGHT));
         break;
       case NvManualCamAwbMode_Twilight:
-        iAutoControlSettings->setAwbMode(AWB_MODE_TWILIGHT);
+        argusCheck(iAutoControlSettings->setAwbMode(AWB_MODE_TWILIGHT));
         break;
       case NvManualCamAwbMode_Shade:
-        iAutoControlSettings->setAwbMode(AWB_MODE_SHADE);
+        argusCheck(iAutoControlSettings->setAwbMode(AWB_MODE_SHADE));
         break;
       case NvManualCamAwbMode_Manual:
-        iAutoControlSettings->setAwbMode(AWB_MODE_MANUAL);
+        argusCheck(iAutoControlSettings->setAwbMode(AWB_MODE_MANUAL));
         break;
       default:
-        iAutoControlSettings->setAwbMode(AWB_MODE_OFF);
+        GST_ERROR("src->controls.wbmode invalid");
         break;
     }
     src->wbPropSet = FALSE;
@@ -407,8 +414,9 @@ bool producer(int32_t cameraIndex,
 
   /* Setting color saturation property */
   if (src->saturationPropSet) {
-    iAutoControlSettings->setColorSaturationEnable(TRUE);
-    iAutoControlSettings->setColorSaturation(src->controls.saturation);
+    argusCheck(iAutoControlSettings->setColorSaturationEnable(TRUE));
+    argusCheck(
+        iAutoControlSettings->setColorSaturation(src->controls.saturation));
     src->saturationPropSet = false;
   }
 
@@ -472,11 +480,11 @@ bool producer(int32_t cameraIndex,
 
   if (src->in_error) {
     GST_ERROR("InvalidState.");
-    iCaptureSession->cancelRequests();
+    argusCheck(iCaptureSession->cancelRequests());
     src->timeout = 1;
   } else if (secToRun != 0) {
     sleep(secToRun);
-    iCaptureSession->cancelRequests();
+    argusCheck(iCaptureSession->cancelRequests());
   } else {
     if (src->stop_requested == FALSE) {
       g_mutex_lock(&src->eos_lock);
@@ -488,7 +496,7 @@ bool producer(int32_t cameraIndex,
   GST_INFO("Cleaning up");
 
   iCaptureSession->stopRepeat();
-  iCaptureSession->waitForIdle();
+  argusCheck(iCaptureSession->waitForIdle());
 
   // Destroy the output stream. This destroys the EGLStream which causes
   // the GL consumer acquire to fail and the consumer thread to end.
