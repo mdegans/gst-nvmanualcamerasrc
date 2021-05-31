@@ -817,6 +817,20 @@ static void gst_nv_manual_camera_src_init(GstNvManualCameraSrc* self) {
   self->total_sensor_modes = nvmanualcam::defaults::TOTAL_SENSOR_MODES;
   self->controls = NvManualCamControls();
 
+  self->wbPropSet = true;
+  self->saturationPropSet = true;
+  self->exposureTimePropSet = true;
+  self->gainPropSet = true;
+  self->ispDigitalGainPropSet = true;
+  self->tnrStrengthPropSet = true;
+  self->tnrModePropSet = true;
+  self->edgeEnhancementStrengthPropSet = true;
+  self->edgeEnhancementModePropSet = true;
+  self->aeAntibandingPropSet = true;
+  self->exposureCompensationPropSet = true;
+  self->aeLockPropSet = true;
+  self->awbLockPropSet = true;
+
   g_mutex_init(&self->manual_buffers_queue_lock);
   g_cond_init(&self->manual_buffers_queue_cond);
 
