@@ -130,7 +130,7 @@ bool producer(int32_t cameraIndex,
 
   // Create capture request and enable output stream.
   UniqueObj<Request> request(
-      iCaptureSession->createRequest(CAPTURE_INTENT_PREVIEW, &err));
+      iCaptureSession->createRequest(CAPTURE_INTENT_MANUAL, &err));
   argusCheck(err);
   IRequest* iRequest = interface_cast<IRequest>(request);
   src->iRequest_ptr = iRequest;
