@@ -60,6 +60,7 @@ bool producer(int32_t cameraIndex,
   uint32_t index = 0;
   gint found = 0;
   gint best_match = -1;
+  Argus::Status err = Argus::Status::STATUS_OK;
 
   // Create the CameraProvider object
   static UniqueObj<CameraProvider> cameraProvider(CameraProvider::create());
@@ -308,8 +309,13 @@ bool producer(int32_t cameraIndex,
   }
 
   if (src->exposureCompensationPropSet) {
-    iAutoControlSettings->setExposureCompensation(
+    err = iAutoControlSettings->setExposureCompensation(
         src->controls.ExposureCompensation);
+    if (err) {
+      GST_WARNING_OBJECT(
+          src, "unable to set exposure compensation to %.4f (status %d)",
+          src->controls.exposure_real, err);
+    }
     src->exposureCompensationPropSet = FALSE;
   }
 
@@ -325,9 +331,12 @@ bool producer(int32_t cameraIndex,
   /* Setting auto exposure lock */
   if (src->aeLockPropSet) {
     if (src->controls.AeLock)
-      iAutoControlSettings->setAeLock(true);
+      err = iAutoControlSettings->setAeLock(true);
     else
-      iAutoControlSettings->setAeLock(false);
+      err = iAutoControlSettings->setAeLock(false);
+    if (err) {
+      GST_WARNING_OBJECT(src, "unable to set ae lock (status %d)", err);
+    }
     src->aeLockPropSet = FALSE;
   }
 
@@ -392,31 +401,51 @@ bool producer(int32_t cameraIndex,
   if (src->exposureTimePropSet) {
     limitExposureTimeRange.min() = src->controls.exposure_real;
     limitExposureTimeRange.max() = src->controls.exposure_real;
-    requestSourceSettings->setExposureTimeRange(limitExposureTimeRange);
+    err = requestSourceSettings->setExposureTimeRange(limitExposureTimeRange);
+    if (err) {
+      GST_WARNING_OBJECT(src, "unable to set exposure time to %ld (status %d)",
+                         src->controls.exposure_real, err);
+    }
     src->exposureTimePropSet = false;
   }
 
   if (src->gainPropSet) {
     sensorModeAnalogGainRange.min() = src->controls.gain;
     sensorModeAnalogGainRange.max() = src->controls.gain;
-    requestSourceSettings->setGainRange(sensorModeAnalogGainRange);
+    err = requestSourceSettings->setGainRange(sensorModeAnalogGainRange);
+    if (err) {
+      GST_WARNING_OBJECT(src, "unable to gain to %.4f (status %d)",
+                         src->controls.gain, err);
+    }
     src->gainPropSet = false;
   }
 
   if (src->ispDigitalGainPropSet) {
     ispDigitalGainRange.min() = src->controls.digital_gain;
     ispDigitalGainRange.max() = src->controls.digital_gain;
-    iAutoControlSettings->setIspDigitalGainRange(ispDigitalGainRange);
+    err = iAutoControlSettings->setIspDigitalGainRange(ispDigitalGainRange);
+    if (err) {
+      GST_WARNING_OBJECT(src, "unable to digital gain to %.4f (status %d)",
+                         src->controls.gain, err);
+    }
     src->ispDigitalGainPropSet = false;
   }
 
-  requestSourceSettings->setSensorMode(modes[cameraMode]);
+  err = requestSourceSettings->setSensorMode(modes[cameraMode]);
+  if (err) {
+    GST_WARNING_OBJECT(src, "unable to sensor mode to %d (status %d)",
+                       cameraMode, err);
+  }
   if (!src->info.fps_n) {
     frameRate = defaults::DEFAULT_FPS;
   }
 
-  requestSourceSettings->setFrameDurationRange(
-      Range<uint64_t>(1e9 / frameRate));
+  err = requestSourceSettings->setFrameDurationRange(
+      Range<uint64_t>(static_cast<uint64_t>(1e9 / frameRate)));
+  if (err != Argus::Status::STATUS_OK) {
+    GST_WARNING_OBJECT(src, "unable to frame duration to %ld (status %d)",
+                       static_cast<uint64_t>(1e9 / frameRate), err);
+  }
 
   GST_INFO("Setup Complete, Starting captures for %d seconds", secToRun);
 
