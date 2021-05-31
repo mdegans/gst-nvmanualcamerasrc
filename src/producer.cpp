@@ -313,7 +313,7 @@ bool producer(int32_t cameraIndex,
         src->controls.ExposureCompensation);
     if (err) {
       GST_WARNING_OBJECT(
-          src, "unable to set exposure compensation to %.4f (status %d)",
+          src, "unable to set exposure compensation to %ld (status %d)",
           src->controls.exposure_real, err);
     }
     src->exposureCompensationPropSet = FALSE;
