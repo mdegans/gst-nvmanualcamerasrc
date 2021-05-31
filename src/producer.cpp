@@ -45,6 +45,15 @@ GST_DEBUG_CATEGORY_STATIC(gst_nvmanualcamerasrc_producer_debug);
 
 using namespace Argus;
 
+// https://stackoverflow.com/questions/14038589/what-is-the-canonical-way-to-check-for-errors-using-the-cuda-runtime-api
+#define argusCheck(code) \
+  { argusAssert((code), __FILE__, __LINE__); }
+inline void argusAssert(Argus::Status code, const char* file, int line) {
+  if (code != Argus::Status::STATUS_OK) {
+    GST_ERROR("Argus Error: %d %s:%d\n", code, file, line);
+  }
+}
+
 namespace nvmanualcam {
 
 bool producer(int32_t cameraIndex,
@@ -82,7 +91,8 @@ bool producer(int32_t cameraIndex,
 
   // Create the capture session using the specified device.
   UniqueObj<CaptureSession> captureSession(
-      iCameraProvider->createCaptureSession(cameraDevices[cameraIndex]));
+      iCameraProvider->createCaptureSession(cameraDevices[cameraIndex], &err));
+  argusCheck(err);
   ICaptureSession* iCaptureSession =
       interface_cast<ICaptureSession>(captureSession);
   if (!iCaptureSession)
@@ -91,21 +101,23 @@ bool producer(int32_t cameraIndex,
   src->iCaptureSession_ptr = iCaptureSession;
   GST_INFO("Creating output stream");
   UniqueObj<OutputStreamSettings> streamSettings(
-      iCaptureSession->createOutputStreamSettings(STREAM_TYPE_EGL));
+      iCaptureSession->createOutputStreamSettings(STREAM_TYPE_EGL, &err));
+  argusCheck(err);
   IEGLOutputStreamSettings* iStreamSettings =
       interface_cast<IEGLOutputStreamSettings>(streamSettings);
   if (iStreamSettings) {
-    iStreamSettings->setPixelFormat(PIXEL_FMT_YCbCr_420_888);
-    iStreamSettings->setResolution(streamSize);
+    argusCheck(iStreamSettings->setPixelFormat(PIXEL_FMT_YCbCr_420_888));
+    argusCheck(iStreamSettings->setResolution(streamSize));
     if (src->controls.meta_enabled) {
       GST_INFO("Enabling metadata.");
-      iStreamSettings->setMetadataEnable(true);
+      argusCheck(iStreamSettings->setMetadataEnable(true));
     } else {
       GST_INFO("Metadata not enabled.");
     }
   }
   UniqueObj<OutputStream> outputStream(
-      iCaptureSession->createOutputStream(streamSettings.get()));
+      iCaptureSession->createOutputStream(streamSettings.get(), &err));
+  argusCheck(err);
   IEGLOutputStream* iStream = interface_cast<IEGLOutputStream>(outputStream);
   if (!iStream)
     ORIGINATE_ERROR("Failed to create OutputStream");
@@ -117,12 +129,14 @@ bool producer(int32_t cameraIndex,
   PROPAGATE_ERROR(consumerThread.waitRunning());
 
   // Create capture request and enable output stream.
-  UniqueObj<Request> request(iCaptureSession->createRequest());
+  UniqueObj<Request> request(
+      iCaptureSession->createRequest(CAPTURE_INTENT_PREVIEW, &err));
+  argusCheck(err);
   IRequest* iRequest = interface_cast<IRequest>(request);
   src->iRequest_ptr = iRequest;
   if (!iRequest)
     ORIGINATE_ERROR("Failed to create Request");
-  iRequest->enableOutputStream(outputStream.get());
+  argusCheck(iRequest->enableOutputStream(outputStream.get()));
 
   IAutoControlSettings* iAutoControlSettings =
       interface_cast<IAutoControlSettings>(iRequest->getAutoControlSettings());
@@ -132,7 +146,7 @@ bool producer(int32_t cameraIndex,
       interface_cast<ICameraProperties>(cameraDevices[cameraIndex]);
   if (!camProps)
     ORIGINATE_ERROR("Failed to create camera properties");
-  camProps->getAllSensorModes(&modes);
+  argusCheck(camProps->getAllSensorModes(&modes));
 
   ISourceSettings* requestSourceSettings =
       interface_cast<ISourceSettings>(iRequest->getSourceSettings());
