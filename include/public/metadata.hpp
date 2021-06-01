@@ -143,9 +143,6 @@ class Metadata {
   Metadata(Metadata&& other) = default;
   virtual ~Metadata() = default;
 
-  Metadata& operator=(Metadata& other) = default;
-  Metadata& operator=(Metadata&& other) = default;
-
 #ifdef HAS_GSTREAMER
   /**
    * @brief Returns the quark associated with this type of metadata. Used to

@@ -68,8 +68,6 @@ int main(int argc, char** argv) {
   GstElement* conv1 = nullptr;
   GstElement* conv2 = nullptr;
   g_autoptr(GstPad) pad = nullptr;
-  g_autoptr(GstPad) text_pad = nullptr;
-  g_autoptr(GMainLoop) main_loop = nullptr;
   g_autoptr(GstBus) bus = nullptr;
   g_autoptr(GstMessage) msg = nullptr;
 

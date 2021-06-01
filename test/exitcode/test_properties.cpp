@@ -39,8 +39,6 @@ int main(int argc, char** argv) {
   g_autoptr(GstElement) pipe = nullptr;
   GstElement* camera = nullptr;
   GstElement* fakesink = nullptr;
-  g_autoptr(GstPad) pad = nullptr;
-  g_autoptr(GMainLoop) main_loop = nullptr;
   g_autoptr(GstBus) bus = nullptr;
   g_autoptr(GstMessage) msg = nullptr;
 

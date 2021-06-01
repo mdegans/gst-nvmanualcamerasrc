@@ -480,7 +480,7 @@ static gpointer consumer_thread(gpointer base) {
     consumerFrameInfo =
         (NvManualFrameInfo*)g_queue_pop_head(self->manual_buffers);
     g_mutex_unlock(&self->manual_buffers_queue_lock);
-    if (&consumerFrameInfo->fd == nullptr) {
+    if (consumerFrameInfo->fd == 0) {
       goto done;
     }
     ret = gst_buffer_pool_acquire_buffer(self->pool, &buffer, nullptr);
