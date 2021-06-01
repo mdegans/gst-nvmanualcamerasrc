@@ -17,7 +17,7 @@ test('gstlaunch test', gst_launch,
 
 # note that it's also possible to wrap any test:
 # https://stackoverflow.com/questions/57734973/how-to-use-valgrind-with-meson
-valgrind = find_program('valgrind', required: false)
+valgrind = find_program('valgrind', required: get_option('use_valgrind'))
 if valgrind.found()
   test('valgrind short', valgrind,
     args: [
