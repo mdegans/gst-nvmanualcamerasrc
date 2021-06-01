@@ -39,6 +39,39 @@
   } while (0)
 
 /**
+ * @brief If `stmt` evaluates nonzero, sets src->stop_requested to
+ * TRUE, src->in_error to TRUE.
+ *
+ * Only works in a context with a GstNvManualCamera* named `src`.
+ *
+ */
+#define NONZERO_STOP_SRC(stmt)                                     \
+  do {                                                             \
+    auto code = (stmt);                                            \
+    while (code) {                                                 \
+      GST_ERROR("STOPPING:because:\"%s\" returned code:%d", #stmt, \
+                static_cast<int>(code));                           \
+      src->stop_requested = TRUE;                                  \
+      src->in_error = TRUE;                                        \
+      break;                                                       \
+    }                                                              \
+  } while (0)
+
+/**
+ * @brief logs to GST_ERROR_OBJ, sets src->stop_requested to true, and
+ * src->in_error to true;
+ *
+ * Only works in a context with a GstNvManualCamera* named `src`.
+ *
+ */
+#define STOP_SRC(...)                   \
+  do {                                  \
+    GST_ERROR_OBJECT(src, __VA_ARGS__); \
+    src->stop_requested = TRUE;         \
+    src->in_error = TRUE;               \
+  } while (0)
+
+/**
  * @brief If the return of `stmt` is nonzero, logs the returned code with
  * GST_ERROR and returns false.
  *
