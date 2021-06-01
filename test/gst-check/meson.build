@@ -43,10 +43,6 @@ foreach t: tests
   test(t['description'], exe,
     is_parallel: false,
     suite: t['suites'],
-    env: [
-      'GST_DEBUG=4',
-      'GST_PLUGIN_PATH=' + libgstnvmanualcamerasrc_dir,
-      'GST_REGISTRY_UPDATE=yes',
-    ],
+    env: test_envs,
   )
 endforeach

@@ -18,6 +18,19 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 # DEALINGS IN THE SOFTWARE.
 
+test_envs = [
+  'GST_DEBUG=4',
+  'GST_PLUGIN_PATH=' + libgstnvmanualcamerasrc_dir,
+  'GST_REGISTRY_UPDATE=yes',
+]
+
+# this is to fix meson/gcc not loading/linking libasan
+# clang works, but gcc needs this
+# issue now is that the plugin does not load with asan enabled
+if cc.get_id() == 'gcc' and get_option('b_sanitize') == 'address'
+  test_envs += 'LD_PRELOAD=/usr/lib/gcc/aarch64-linux-gnu/7/libasan.so'
+endif
+
 subdir('googletest')
 subdir('gst-check')
 subdir('exitcode')
