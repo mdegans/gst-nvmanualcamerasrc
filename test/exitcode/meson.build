@@ -41,6 +41,12 @@ tests = [
     'suites': ['integration'],
   },
   {
+    'description': 'test stress start stop',
+    'filename': 'test_stress_start_stop',
+    'sources': ['test_stress_start_stop.cpp'],
+    'suites': ['integration'],
+  },
+  {
     'description': 'demo sharpness',
     'filename': 'demo_sharpness',
     'sources': ['demo_sharpness.cpp'],
