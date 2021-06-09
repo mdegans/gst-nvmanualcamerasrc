@@ -391,6 +391,7 @@ static gboolean gst_nv_manual_camera_set_caps(GstBaseSrc* base, GstCaps* caps) {
 static gboolean gst_nv_manual_camera_start(GstBaseSrc* base) {
   GstNvManualCameraSrc* self = (GstNvManualCameraSrc*)base;
   self->stop_requested = FALSE;
+  self->in_error = FALSE;
 
   return TRUE;
 }
