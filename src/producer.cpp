@@ -56,7 +56,7 @@ bool producer(int32_t cameraIndex,
                           "nvmanualcamerasrc:producer", 0,
                           "nvmanualcamerasrc producer");
   GST_INFO("starting producer thread");
-  UniqueObj<CameraProvider> cameraProvider(nullptr);
+  static UniqueObj<CameraProvider> cameraProvider(CameraProvider::create());
   ICameraProvider* iCameraProvider = nullptr;
   UniqueObj<CaptureSession> captureSession(nullptr);
   ICaptureSession* iCaptureSession = nullptr;
@@ -81,12 +81,11 @@ bool producer(int32_t cameraIndex,
   gint best_match = -1;
   Argus::Status err = Argus::Status::STATUS_OK;
 
-  GST_INFO("Creating CameraProvider");
-  cameraProvider.reset(CameraProvider::create(&err));
+  GST_INFO("Checking cameraProvider");
   NONZERO_RETURN_FALSE(err);
   iCameraProvider = interface_cast<ICameraProvider>(cameraProvider);
   if (!iCameraProvider) {
-    ORIGINATE_ERROR("Failed to create CameraProvider");
+    ORIGINATE_ERROR("Failed to get CameraProvider");
   }
 
   GST_INFO("Getting cameraDevices");
