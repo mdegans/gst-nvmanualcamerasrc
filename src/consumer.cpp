@@ -87,13 +87,9 @@ bool Consumer::threadExecute(GstNvManualCameraSrc* src) {
   src->frameInfo->fd = -1;
   src->frameInfo->metadata.reset();
   Argus::Status err = Argus::STATUS_OK;
-  while (true) {
+  while (!src->stop_requested) {
     UniqueObj<Frame> frame(
         iFrameConsumer->acquireFrame(Argus::TIMEOUT_INFINITE, &err));
-    NONZERO_STOP_SRC(err);
-    if (src->stop_requested == TRUE) {
-      break;
-    }
     if (err || !frame) {
       g_mutex_lock(&src->manual_buffers_queue_lock);
       STOP_SRC("Could not acquireFrame");
