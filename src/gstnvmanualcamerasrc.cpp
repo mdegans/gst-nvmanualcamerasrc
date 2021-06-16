@@ -263,9 +263,6 @@ static void gst_nv_memory_allocator_free(GstAllocator* allocator,
 
 static void gst_nv_memory_allocator_class_init(
     GstNVManualMemoryAllocatorClass* klass) {
-  GST_DEBUG_CATEGORY_INIT(gst_nvmanualcamerasrc_debug, "nvmanualcamerasrc", 0,
-                          "nvmanualcamerasrc");
-
   GstAllocatorClass* allocator_class;
   allocator_class = (GstAllocatorClass*)klass;
 
@@ -597,6 +594,9 @@ static GstFlowReturn gst_nv_manual_camera_create(GstBaseSrc* base,
 /* initialize the nvmanualcamerasrc's class */
 static void gst_nv_manual_camera_src_class_init(
     GstNvManualCameraSrcClass* klass) {
+  GST_DEBUG_CATEGORY_INIT(gst_nvmanualcamerasrc_debug, "nvmanualcamerasrc", 0,
+                          "nvmanualcamerasrc");
+
   GObjectClass* gobject_class;
   GstElementClass* gstelement_class;
   GstBaseSrcClass* base_src_class;
