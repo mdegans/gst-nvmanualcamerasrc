@@ -22,6 +22,7 @@ test_envs = [
   'GST_DEBUG=4',
   'GST_PLUGIN_PATH=' + libgstnvmanualcamerasrc_dir,
   'GST_REGISTRY_UPDATE=yes',
+  'G_DEBUG=fatal_warnings',
 ]
 
 # this is to fix meson/gcc not loading/linking libasan
