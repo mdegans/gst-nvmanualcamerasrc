@@ -26,14 +26,39 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef E0CAA875_7EE8_4F6B_9A1C_99C2CF152440
-#define E0CAA875_7EE8_4F6B_9A1C_99C2CF152440
+#ifndef BA611933_ED6C_4DCF_9AF1_2FFAA6CFCA31
+#define BA611933_ED6C_4DCF_9AF1_2FFAA6CFCA31
 
-// If the version is modified, don't forget to change it in the VERSION file
-#define PROJ_VER "1.1.0"
-#define PROJ_DESCRIPTION "nVidia ARGUS Camera Source"
-#define BINARY_PACKAGE "NvARGUSCameraSrc"
-#define PROJ_URL "https://github.com/mdegans/gst-nvarguscamerasrc"
-#define LICENSE "Proprietary"
+#include "stoppable_thread.hpp"
 
-#endif /* E0CAA875_7EE8_4F6B_9A1C_99C2CF152440 */
+#include <Argus/Argus.h>
+#include <EGLStream/FrameConsumer.h>
+
+namespace nvmanualcam::utils {
+
+/*******************************************************************************
+ * Consumer thread:
+ *   Creates a Consumer object to read frames from the OutputStream just
+ *tests for sanity.
+ ******************************************************************************/
+class Consumer : public nvmanualcam::utils::StoppableThread {
+ public:
+  explicit Consumer(Argus::OutputStream* stream) : m_stream(stream) {}
+  ~Consumer() {}
+
+ private:
+  /** @name Thread methods */
+  /**@{*/
+  virtual bool threadInitialize(GstNvManualCameraSrc*);
+  virtual bool threadExecute(GstNvManualCameraSrc*);
+  virtual bool threadShutdown(GstNvManualCameraSrc*);
+  /**@}*/
+
+  Argus::OutputStream* m_stream;
+  // GstNvManualCameraSrc *manual_src;
+  Argus::UniqueObj<EGLStream::FrameConsumer> m_consumer;
+};
+
+}  // namespace nvmanualcam::utils
+
+#endif /* BA611933_ED6C_4DCF_9AF1_2FFAA6CFCA31 */

@@ -1,0 +1,6 @@
+[wrap-git]
+url = https://github.com/mdegans/gst-nvmanualcamerasrc.git
+revision = dev
+
+[provide]
+gstnvmanualcamerameta = gstnvmanualcamerameta_dep

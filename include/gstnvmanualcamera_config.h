@@ -26,40 +26,22 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-/* entry point to initialize the plug-in
- * initialize the plug-in itself
- * register the element factories and other features
+#ifndef A6479C9D_8364_49AA_B5B3_889C52B6889D
+#define A6479C9D_8364_49AA_B5B3_889C52B6889D
+
+/* PACKAGE: this is usually set by autotools depending on some _INIT macro
+ * in configure.ac and then written into and defined in config.h, but we can
+ * just set it ourselves here in case someone doesn't use autotools to
+ * compile this code. GST_PLUGIN_DEFINE needs PACKAGE to be defined.
  */
+#ifndef PACKAGE
+#define PACKAGE "nvmanualcamerasrc"
+#endif
 
-#include "gstnvmanualcamera_config.h"
-#include "gstnvmanualcamerasrc.hpp"
+#ifdef MESON
+#include "gstnvmanualcamera_config_meson.h"
+#else
+#include "gstnvmanualcamera_config_make.h"
+#endif
 
-#include <gst/base/gstbasesrc.h>
-#include <gst/gst.h>
-
-static gboolean nvmanualcamerasrc_init(GstPlugin* nvmanualcamerasrc) {
-  /* debug category for fltering log messages
-   *
-   * exchange the string 'Template nvmanualcamerasrc' with your description
-   */
-  return gst_element_register(nvmanualcamerasrc, "nvmanualcamerasrc",
-                              GST_RANK_PRIMARY, GST_TYPE_NVMANUALCAMERASRC);
-}
-
-/* gstreamer looks for this structure to register nvmanualcamerasrcs
- *
- * to change this:
- *  * Gnu Make: modify include/gstnvmanualcamera_config_make.h
- *  * Meson: change the VERSION file to set the version and the root meson.build
- *    for the rest.
- *
- */
-GST_PLUGIN_DEFINE(GST_VERSION_MAJOR,
-                  GST_VERSION_MINOR,
-                  nvmanualcamerasrc,
-                  PROJ_DESCRIPTION,
-                  nvmanualcamerasrc_init,
-                  PROJ_VER,
-                  LICENSE,
-                  BINARY_PACKAGE,
-                  PROJ_URL)
+#endif /* A6479C9D_8364_49AA_B5B3_889C52B6889D */

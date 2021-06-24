@@ -19,21 +19,39 @@
 # DEALINGS IN THE SOFTWARE.
 
 # setup the project's global options
-project('gstnvarguscamerasrc', ['cpp'],
+project('gstnvmanualcamerasrc', ['cpp'],
   version: run_command(
     'head', '-n', '1', files('VERSION'),
   ).stdout().strip(),
-  meson_version: '>= 0.56.0',
+  meson_version: '>= 0.57.1',
   license: 'Proprietary',
   default_options: [
     'cpp_std=c++17',
-    'warning_level=1',  # -Wall
+    'warning_level=2',  # -Wall, -Wextra
     'werror=true',  # -Werror
   ],
 )
 
 # the c++ compiler object
 cc = meson.get_compiler('cpp')
+
+# get argus version (actually detect the JetPack version, but that ends up
+# being more useful). It's used to define 'JETPACK_45'.
+pymod = import('python')
+python3 = pymod.find_installation('python3')
+argus_version = run_command(
+  python3, '-sSE', files('argus_version.py')).stdout().strip()
+has_jetpack_45 = false
+if argus_version == 'None'
+  error('Argus not found')
+else
+  if argus_version.version_compare('>=32.5')
+    message('JetPack >= 4.5 Detected. Enabling extra Metadata.')
+    has_jetpack_45 = true
+  else
+    warning('JetPack >= 4.5 NOT Detected. Disabling extra Metadata.')
+  endif
+endif
 
 # split the project version
 proj_ver = meson.project_version().split('.')
@@ -42,10 +60,10 @@ proj_ver_short = proj_ver[0] + '.' + proj_ver[1]
 proj_ver_major = proj_ver[0]
 proj_ver_minor = proj_ver[1]
 proj_ver_patch = proj_ver[2]
-# all of this is used by configure_file on gstnvarguscamera_config_meson.h.in
-proj_description = 'nVidia ARGUS Camera Source (meson)'
-proj_url = 'https://github.com/mdegans/gst-nvarguscamerasrc'
-binary_package = 'NvARGUSCameraSrc'
+# all of this is used by configure_file on gstnvmanualcamera_config_meson.h.in
+proj_description = 'nVidia MANUAL Camera Source (meson)'
+proj_url = 'https://github.com/mdegans/gst-nvmanualcamerasrc'
+binary_package = 'NvMANUALCameraSrc'
 origin = 'github'
 # change this if you fork this
 
@@ -57,3 +75,5 @@ origin = 'github'
 
 subdir('include')
 subdir('src')
+subdir('test')
+

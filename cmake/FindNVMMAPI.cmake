@@ -1,4 +1,4 @@
-# Copyright (c) 2020, NVIDIA CORPORATION. All rights reserved.
+# Copyright (c) 2017, NVIDIA CORPORATION. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -24,27 +24,32 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-Steps to compile the "gst-nvarguscamera" sources natively:
+# - Try to find the NVIDIA Tegra Multimedia API
+# Once done this will define
+#  NVMMAPI_FOUND - System has NVMMAPI
+#  NVMMAPI_INCLUDE_DIRS - The NVMMAPI include directories
+#  NVMMAPI_LIBRARIES - The libraries needed to use the NVMMAPI
+#  NVMMAPI_DEFINITIONS - Compiler switches required for using NVMMAPI
 
-1) Install gstreamer related packages on target using the command:
+find_package(PkgConfig)
 
-	sudo apt-get install libgstreamer1.0-dev \
-		gstreamer1.0-plugins-base \
-		gstreamer1.0-plugins-good \
-		libgstreamer-plugins-base1.0-dev \
-		libegl1-mesa-dev
+find_path(NVMMAPI_INCLUDE_DIR nvbuf_utils.h
+  HINTS
+    /usr/src/jetson_multimedia_api/argus/include
+    /usr/src/jetson_multimedia_api/include
+)
 
-2) Install "jetson_multimedia_api" package from latest Jetpack release.
+find_library(NVMMAPI_LIBRARY NAMES nvbuf_utils
+             HINTS /usr/lib/${CMAKE_LIBRARY_ARCHITECTURE}/tegra)
 
-3) Download and extract the package "gst-nvarguscamera_src.tbz2" as follow:
+set(NVMMAPI_LIBRARIES ${NVMMAPI_LIBRARY})
+set(NVMMAPI_INCLUDE_DIRS ${NVMMAPI_INCLUDE_DIR})
+set(NVMMAPI_DEFINITIONS -DNVMMAPI_SUPPORTED)
 
-	tar -I lbzip2 -xvf gst-nvarguscamera_src.tbz2
+include(FindPackageHandleStandardArgs)
+# handle the QUIETLY and REQUIRED arguments and set ARGUS_FOUND to TRUE
+# if all listed variables are TRUE
+find_package_handle_standard_args(NVMMAPI DEFAULT_MSG
+                                  NVMMAPI_LIBRARY NVMMAPI_INCLUDE_DIR)
 
-3) Run the following commands to build and install "libgstnvarguscamerasrc.so":
-	make
-	make install
-	or
-	DEST_DIR=<dir> make install
-
-  Note: "make install" will copy library "libgstnvarguscamerasrc.so"
-  into "/usr/lib/aarch64-linux-gnu/gstreamer-1.0" directory.
+mark_as_advanced(NVMMAPI_INCLUDE_DIR NVMMAPI_LIBRARY)

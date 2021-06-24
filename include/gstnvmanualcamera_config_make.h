@@ -26,40 +26,14 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-/* entry point to initialize the plug-in
- * initialize the plug-in itself
- * register the element factories and other features
- */
+#ifndef E0CAA875_7EE8_4F6B_9A1C_99C2CF152440
+#define E0CAA875_7EE8_4F6B_9A1C_99C2CF152440
 
-#include "gstnvmanualcamera_config.h"
-#include "gstnvmanualcamerasrc.hpp"
+// If the version is modified, don't forget to change it in the VERSION file
+#define PROJ_VER "1.1.0"
+#define PROJ_DESCRIPTION "nVidia MANUAL Camera Source"
+#define BINARY_PACKAGE "NvMANUALCameraSrc"
+#define PROJ_URL "https://github.com/mdegans/gst-nvmanualcamerasrc"
+#define LICENSE "Proprietary"
 
-#include <gst/base/gstbasesrc.h>
-#include <gst/gst.h>
-
-static gboolean nvmanualcamerasrc_init(GstPlugin* nvmanualcamerasrc) {
-  /* debug category for fltering log messages
-   *
-   * exchange the string 'Template nvmanualcamerasrc' with your description
-   */
-  return gst_element_register(nvmanualcamerasrc, "nvmanualcamerasrc",
-                              GST_RANK_PRIMARY, GST_TYPE_NVMANUALCAMERASRC);
-}
-
-/* gstreamer looks for this structure to register nvmanualcamerasrcs
- *
- * to change this:
- *  * Gnu Make: modify include/gstnvmanualcamera_config_make.h
- *  * Meson: change the VERSION file to set the version and the root meson.build
- *    for the rest.
- *
- */
-GST_PLUGIN_DEFINE(GST_VERSION_MAJOR,
-                  GST_VERSION_MINOR,
-                  nvmanualcamerasrc,
-                  PROJ_DESCRIPTION,
-                  nvmanualcamerasrc_init,
-                  PROJ_VER,
-                  LICENSE,
-                  BINARY_PACKAGE,
-                  PROJ_URL)
+#endif /* E0CAA875_7EE8_4F6B_9A1C_99C2CF152440 */

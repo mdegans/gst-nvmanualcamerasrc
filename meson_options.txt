@@ -1,0 +1,6 @@
+option('use_valgrind',
+  type: 'feature',
+  value: 'disabled',  # auto is the default, which works but these tests can be
+  # very slow so we don't want them to run simply because valgrind is found
+  description: 'enable the `memory` test suite using valgrind and gst-launch',
+)

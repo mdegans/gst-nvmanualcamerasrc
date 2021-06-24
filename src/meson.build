@@ -24,15 +24,16 @@ gst_install_dir = gst_dep.get_variable(pkgconfig: 'pluginsdir')
 # this is not actually a lib install dir, but i'm using the name from
 # the Makefile for consistency
 lib_install_dir = '/usr/lib/aarch64-linux-gnu/tegra/'
-
+# Please, Nvidia, this should not be necessary;
+argus_include_dir = '/usr/src/jetson_multimedia_api/include/'
 # mmapi incdirs
 mmapi_incdirs = [
-  include_directories('/usr/src/jetson_multimedia_api/include/'),
+  include_directories(argus_include_dir),
   include_directories('/usr/src/jetson_multimedia_api/argus/samples/utils/'),
 ]
 
 # a list of our dependencies
-gstnvarguscamearsrc_deps = [
+gstnvmanualcamerasrc_deps = [
   gst_dep,
   dependency('gstreamer-base-1.0'),
   dependency('gstreamer-video-1.0'),
@@ -40,17 +41,89 @@ gstnvarguscamearsrc_deps = [
   # glib-2.0 is implied by above
   cc.find_library('nvbuf_utils', dirs: lib_install_dir),
   cc.find_library('nvdsbufferpool', dirs: lib_install_dir),
-  cc.find_library('nvargus', dirs: lib_install_dir),
+  # cc.find_library('nvargus', dirs: lib_install_dir),
+  # many thanks @danelll of Nvidia DevTalk Forum
+  # Replace -largus with -largus_socketclient.
+  cc.find_library('nvargus_socketclient', dirs: lib_install_dir),
   # https://mesonbuild.com/howtox.html
   # "Lots of people seem to do this manually with find_library('pthread') or 
   # something similar. Do not do that. It is not portable. Instead do this."
   dependency('threads'),
 ]
 
+# our metadata source
+gstnvmanualcamera_metadata_src = [
+  'metadata.cpp',
+]
+
+# metadata cflags
+gstnvmanualcamera_metadata_cflags = []
+
+# metadata deps
+boost_json_dep = dependency('boost', modules: ['json'], required: false)
+if boost_json_dep.found()
+  gstnvmanualcamera_metadata_cflags += '-DHAS_BOOST_JSON'
+endif
+if gst_dep.found()
+  gstnvmanualcamera_metadata_cflags += '-DHAS_GSTREAMER'
+endif
+if has_jetpack_45
+  gstnvmanualcamera_metadata_cflags += '-DJETPACK_45'
+endif
+gstnvmanualcamera_metadata_deps = [
+  cc.find_library('nvargus', dirs: lib_install_dir),
+  gst_dep,
+  boost_json_dep,
+]
+
+# useful to point to the folder including the plugin
+libgstnvmanualcamerasrc_dir = meson.current_build_dir()
+
+# variables for use with dependency.get_variable(..)
+gstnvmanualcamerameta_variables = [
+  'pluginsdir_uninstalled=' + libgstnvmanualcamerasrc_dir,
+  'pluginsdir=' + gst_install_dir,
+]
+
+# metadata library target
+libgstnvmanualcamerameta = library('gstnvmanualcamerameta',
+  gstnvmanualcamera_metadata_src,
+  dependencies: gstnvmanualcamera_metadata_deps,
+  include_directories: [gstnvmanualcamerasrc_incdirs, mmapi_incdirs],
+  install: true,
+  version: meson.project_version(),
+  cpp_args: gstnvmanualcamera_metadata_cflags,
+)
+
+# a metadata dependency for use in subprojects
+gstnvmanualcamerameta_dep = declare_dependency(
+  compile_args: gstnvmanualcamera_metadata_cflags,
+  dependencies: gstnvmanualcamera_metadata_deps,
+  include_directories: [gstnvmanualcamerasrc_incdirs, mmapi_incdirs],
+  link_with: libgstnvmanualcamerameta,
+  version: meson.project_version(),
+  variables: gstnvmanualcamerameta_variables,
+)
+
+# a pkg-config file to find the metadata library
+pkg = import('pkgconfig')
+gstnvmanualcamera_metadata_pkgconfig_cflags = gstnvmanualcamera_metadata_cflags
+gstnvmanualcamera_metadata_pkgconfig_cflags += '-I' + argus_include_dir
+pkg.generate(libgstnvmanualcamerameta,
+  description: 'Metadata library for `nvmanualcamerasrc` Metadata.',
+  libraries: gstnvmanualcamera_metadata_deps,
+  extra_cflags: gstnvmanualcamera_metadata_pkgconfig_cflags,
+  subdirs: meson.project_name(),  # $PREFIX/include/$PROJECT_NAME
+  variables: gstnvmanualcamerameta_variables,
+)
+
 # a list of source files (globbing is verboten!)
-gstnvarguscameasrc_src = [
-  'gstnvarguscamera_utils.cpp',
-  'gstnvarguscamerasrc.cpp',
+gstnvmanualcamerasrc_src = [
+  'gstnvmanualcamera_utils.cpp',
+  'gstnvmanualcamerasrc.cpp',
+  'stoppable_thread.cpp',
+  'consumer.cpp',
+  'producer.cpp',
   'plugin.cpp',
 ]
 
@@ -58,14 +131,11 @@ gstnvarguscameasrc_src = [
 # ldflags = ['-Wl,--no-undefined']
 
 # our library target
-libgstnvarguscameasrc = library(meson.project_name(), gstnvarguscameasrc_src,
-  dependencies: gstnvarguscamearsrc_deps,
-  include_directories: [
-    gstnvarguscamerasrc_incdir,
-    mmapi_incdirs,
-  ],
+libgstnvmanualcamerasrc = library(meson.project_name(), gstnvmanualcamerasrc_src,
+  dependencies: gstnvmanualcamerasrc_deps,
+  link_with: libgstnvmanualcamerameta,
+  include_directories: [gstnvmanualcamerasrc_incdirs, mmapi_incdirs],
   install: true,
   install_dir: gst_install_dir,
-  cpp_args: gstnvarguscamerasrc_cflags,
-#  link_args: ldflags,
+  cpp_args: [gstnvmanualcamerasrc_cflags, gstnvmanualcamera_metadata_cflags],
 )
