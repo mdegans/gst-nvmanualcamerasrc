@@ -1,3 +1,4 @@
+#include "gst/gstpad.h"
 #include "metadata.hpp"
 
 #include <gst/gst.h>
@@ -62,6 +63,16 @@ GstPadProbeReturn metadata_probe(GstPad* pad,
         "version?",
         latency_ns);
   }
+
+  // test sensor exposure time
+  auto exp_time = metab->getSensorExposureTime();
+  if (exp_time) {
+    GST_INFO("Sensor exposure time:%ld", timestamp);
+  } else {
+    TEST_FAIL("Sensor exposure time is 0");
+  }
+  // TODO(mdegans): test exposure time is less than a frame (it isn't and
+  // that's) not possible, so it appears libargus is producing bad meta on this.
 
   // sanity test for metaa and metab
   assert(metaa->getSceneLux() == metab->getSceneLux());  // a value matches
