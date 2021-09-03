@@ -297,19 +297,17 @@ static void gst_nv_manual_camera_src_finalize(GObject* object);
 
 static GstCaps* gst_nv_manual_camera_fixate(GstBaseSrc* base, GstCaps* caps) {
   GstStructure* structure = nullptr;
+  GstNvManualCameraSrc* self = GST_NVMANUALCAMERASRC(base);
 
   caps = gst_caps_make_writable(caps);
 
   structure = gst_caps_get_structure(caps, 0);
 
-  gst_structure_fixate_field_nearest_int(structure, "width",
-                                         nvmanualcam::defaults::DEFAULT_WIDTH);
-  gst_structure_fixate_field_nearest_int(structure, "height",
-                                         nvmanualcam::defaults::DEFAULT_HEIGHT);
-  gst_structure_fixate_field_nearest_fraction(
-      structure, "framerate", nvmanualcam::defaults::DEFAULT_FPS, 1);
-  caps = GST_BASE_SRC_CLASS(gst_nv_manual_camera_src_parent_class)
-             ->fixate(base, caps);
+  gst_structure_fixate_field_nearest_int(structure, "width", self->info.width);
+  gst_structure_fixate_field_nearest_int(structure, "height", self->info.height);
+  gst_structure_fixate_field_nearest_fraction(structure, "framerate", self->info.fps_n, self->info.fps_d);
+
+  caps = GST_BASE_SRC_CLASS(gst_nv_manual_camera_src_parent_class)->fixate(base, caps);
 
   return caps;
 }
@@ -430,14 +428,11 @@ static gboolean gst_nv_manual_camera_stop(GstBaseSrc* base) {
 }
 
 static gpointer manual_thread(gpointer base) {
+  GST_INFO("starting producer thread");
+
   GstNvManualCameraSrc* self = (GstNvManualCameraSrc*)base;
 
-  int32_t cameraIndex = self->sensor_id;
-  int32_t cameraMode = self->sensor_mode;
-  int32_t secToRun = self->timeout;
-  Argus::Size2D<uint32_t> streamSize(self->info.width, self->info.height);
-
-  nvmanualcam::producer(cameraIndex, cameraMode, streamSize, secToRun, self);
+  nvmanualcam::producer(self);
 
   self->stop_requested = TRUE;
 
@@ -651,22 +646,22 @@ static void gst_nv_manual_camera_src_class_init(
 
   g_object_class_install_property(
       gobject_class, PROP_SENSOR_ID,
-      g_param_spec_int(
+      g_param_spec_uint64(
           "sensor-id", "Sensor ID", "Set the id of camera sensor to use.", 0,
           G_MAXUINT8, nvmanualcam::defaults::SENSOR_ID,
           (GParamFlags)(G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS)));
 
   g_object_class_install_property(
       gobject_class, PROP_SENSOR_MODE,
-      g_param_spec_int(
+      g_param_spec_uint64(
           "sensor-mode", "Sensor Mode",
           "Camera sensor mode to use. (-1 uses the default, which is \?\?\?)",
-          -1, G_MAXUINT8, nvmanualcam::defaults::SENSOR_MODE_STATE,
+          0, G_MAXUINT8, nvmanualcam::defaults::SENSOR_MODE,
           (GParamFlags)(G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS)));
 
   g_object_class_install_property(
       gobject_class, PROP_TOTAL_SENSOR_MODES,
-      g_param_spec_int(
+      g_param_spec_uint64(
           "total-sensor-modes", "Total Sensor Modes",
           "Query the number of sensor modes available.", 0, G_MAXUINT8,
           nvmanualcam::defaults::TOTAL_SENSOR_MODES,
@@ -802,9 +797,9 @@ static void gst_nv_manual_camera_src_class_init(
  */
 static void gst_nv_manual_camera_src_init(GstNvManualCameraSrc* self) {
   gst_video_info_init(&self->info);
-  self->info.width = nvmanualcam::defaults::DEFAULT_WIDTH;
-  self->info.height = nvmanualcam::defaults::DEFAULT_HEIGHT;
-  self->info.fps_n = nvmanualcam::defaults::DEFAULT_FPS;
+  self->info.width = nvmanualcam::defaults::WIDTH;
+  self->info.height = nvmanualcam::defaults::HEIGHT;
+  self->info.fps_n = nvmanualcam::defaults::FPS;
   self->info.fps_d = 1;
   self->frame_duration = nvmanualcam::get_frame_duration(self->info);
   self->stop_requested = FALSE;
@@ -814,7 +809,7 @@ static void gst_nv_manual_camera_src_init(GstNvManualCameraSrc* self) {
   self->timeout = 0;
   self->in_error = FALSE;
   self->sensor_id = nvmanualcam::defaults::SENSOR_ID;
-  self->sensor_mode = nvmanualcam::defaults::SENSOR_MODE_STATE;
+  self->sensor_mode = nvmanualcam::defaults::SENSOR_MODE;
   self->total_sensor_modes = nvmanualcam::defaults::TOTAL_SENSOR_MODES;
   self->controls = NvManualCamControls();
 
@@ -886,10 +881,10 @@ static void gst_nv_manual_camera_src_set_property(GObject* object,
       self->saturationPropSet = TRUE;
       break;
     case PROP_SENSOR_ID:
-      self->sensor_id = g_value_get_int(value);
+      self->sensor_id = g_value_get_uint64(value);
       break;
     case PROP_SENSOR_MODE:
-      self->sensor_mode = g_value_get_int(value);
+      self->sensor_mode = g_value_get_uint64(value);
       break;
     case PROP_EXPOSURE_TIME:
       self->controls.exposure_time = g_value_get_float(value);
@@ -975,13 +970,13 @@ static void gst_nv_manual_camera_src_get_property(GObject* object,
       g_value_set_float(value, self->controls.saturation);
       break;
     case PROP_SENSOR_ID:
-      g_value_set_int(value, self->sensor_id);
+      g_value_set_uint64(value, self->sensor_id);
       break;
     case PROP_SENSOR_MODE:
-      g_value_set_int(value, self->sensor_mode);
+      g_value_set_uint64(value, self->sensor_mode);
       break;
     case PROP_TOTAL_SENSOR_MODES:
-      g_value_set_int(value, self->total_sensor_modes);
+      g_value_set_uint64(value, self->total_sensor_modes);
       break;
     case PROP_EXPOSURE_TIME:
       g_value_set_float(value, self->controls.exposure_time);

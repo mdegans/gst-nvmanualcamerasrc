@@ -60,10 +60,6 @@ G_BEGIN_DECLS
 
 namespace nvmanualcam::defaults {
 
-const int DEFAULT_FPS = 30;       // mostly ignored, deprecated
-const int DEFAULT_HEIGHT = 1080;  // mostly ignored, deprecated
-const int DEFAULT_WIDTH = 1920;   // mostly ignored, deprecated
-
 const auto AEANTIBANDING_MODE = NvManualCamAeAntibandingMode_Off;
 const auto EE_MODE = NvManualCamEdgeEnhancementMode_Off;
 const auto TNR_MODE = NvManualCamNoiseReductionMode_Off;
@@ -81,9 +77,12 @@ const float EXPOSURE_TIME = 1.0;
 const float GAIN = 1.0f;
 const float SATURATION = 1.0;
 const float TNR_STRENGTH = -1.0;
-const int SENSOR_MODE_STATE = -1;
 const uint SENSOR_ID = 0;
+const uint SENSOR_MODE = 0;
 const uint TIMEOUT = 0;
+const uint WIDTH = 1920;
+const uint HEIGHT = 1090;
+const uint FPS = 30;
 const uint TOTAL_SENSOR_MODES = 0;
 
 }  // namespace nvmanualcam::defaults
@@ -151,10 +150,10 @@ struct _GstNvManualCameraSrc {
 
   GstVideoInfo info;
   guint64 frame_duration;  // in nanoseconds
-  gint sensor_id;
-  gint sensor_mode;
+  guint64 sensor_id;
+  guint64 sensor_mode;
 
-  guint total_sensor_modes;
+  guint64 total_sensor_modes;
   guint timeout;
 
   GQueue* nvmm_buffers;

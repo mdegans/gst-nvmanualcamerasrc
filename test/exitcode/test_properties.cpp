@@ -26,6 +26,12 @@ bool check_property_equal(GstElement* e, const gchar* propname, uint value) {
   return value == actual;
 }
 
+bool check_property_equal(GstElement* e, const gchar* propname, guint64 value) {
+  guint64 actual;
+  g_object_get(G_OBJECT(e), propname, &actual, nullptr);
+  return value == actual;
+}
+
 bool check_property_equal(GstElement* e, const gchar* propname, float value) {
   float actual;
   g_object_get(G_OBJECT(e), propname, &actual, nullptr);
@@ -93,8 +99,8 @@ int main(int argc, char** argv) {
   g_assert(check_property_equal(camera, "exposuretime", 0.5f));
   g_assert(check_property_equal(camera, "gain", 2.0f));
   g_assert(check_property_equal(camera, "saturation", 2.0f));
-  g_assert(check_property_equal(camera, "sensor-id", 0));
-  g_assert(check_property_equal(camera, "sensor-mode", 0));
+  g_assert(check_property_equal(camera, "sensor-id", (guint64)0));
+  g_assert(check_property_equal(camera, "sensor-mode", (guint64)0));
   g_assert(check_property_equal(camera, "tnr-mode", 2));
   g_assert(check_property_equal(camera, "wbmode", 0));
   g_assert(check_property_equal(camera, "metadata", true));

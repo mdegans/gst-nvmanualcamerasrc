@@ -34,11 +34,7 @@
 
 namespace nvmanualcam {
 
-bool producer(int32_t cameraIndex,
-              int32_t cameraMode,
-              const Argus::Size2D<uint32_t>& streamSize,
-              int32_t secToRun,
-              GstNvManualCameraSrc* self);
+bool producer(GstNvManualCameraSrc* self);
 
 }  // namespace nvmanualcam
 
