@@ -80,8 +80,8 @@ const float TNR_STRENGTH = -1.0;
 const uint SENSOR_ID = 0;
 const uint SENSOR_MODE = 0;
 const uint TIMEOUT = 0;
-const uint WIDTH = 1920;
-const uint HEIGHT = 1090;
+const uint WIDTH = 4032;
+const uint HEIGHT = 3040;
 const uint FPS = 30;
 const uint TOTAL_SENSOR_MODES = 0;
 
