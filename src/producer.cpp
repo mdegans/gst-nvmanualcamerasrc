@@ -107,6 +107,36 @@ bool producer(GstNvManualCameraSrc* src) {
   // "Object lifetimes man; that shit'll ruin your life"
   src->iCaptureSession_ptr = iSession;
 
+  GST_INFO("Getting CameraProperties");
+  iCamProps = interface_cast<ICameraProperties>(devices[src->sensor_id]);
+  if (!iCamProps) {
+    ORIGINATE_ERROR("Failed to create camera properties");
+  }
+
+  NONZERO_RETURN_FALSE(iCamProps->getAllSensorModes(&modes));
+  src->total_sensor_modes = modes.size();
+  GST_INFO("Checking sensor-mode is valid");
+  if (src->sensor_mode >= modes.size()) {
+    ORIGINATE_ERROR("Invalid sensor mode %zu selected %zu present",
+                    src->sensor_mode, modes.size());
+  }
+
+  // Get sensor mode we will use, and it's interface
+  auto mode = modes[src->sensor_mode];
+  auto iMode = interface_cast<ISensorMode>(mode);
+
+  // get the resolution and supported frame duration range
+  auto resolution = iMode->getResolution();
+  auto f_duration = iMode->getFrameDurationRange();
+
+  // update info, so caps are fixated properly
+  src->info.width = resolution.width();
+  src->info.height = resolution.height();
+  // use frame rate
+  src->frame_duration = f_duration.min();
+  src->info.fps_n = round(1000000000 / f_duration.min());
+  src->controls.exposure_real = src->controls.exposure_time * src->frame_duration;
+
   GST_INFO("Creating OutputStreamSettings");
   streamSettings.reset(
       iSession->createOutputStreamSettings(STREAM_TYPE_EGL, &err));
@@ -126,6 +156,8 @@ bool producer(GstNvManualCameraSrc* src) {
     } else {
       GST_INFO("Metadata not enabled.");
     }
+  } else {
+    ORIGINATE_ERROR("Could not get IEGLOutputStreamSettings");
   }
 
   GST_INFO("Creating OutputStream");
@@ -158,33 +190,6 @@ bool producer(GstNvManualCameraSrc* src) {
       interface_cast<IAutoControlSettings>(iRequest->getAutoControlSettings());
   // FIXME(mdegans): remove this (potential lifetime issue)
   src->iAutoControlSettings_ptr = iAutoControlSettings;
-
-  GST_INFO("Getting CameraProperties");
-  iCamProps = interface_cast<ICameraProperties>(devices[src->sensor_id]);
-  if (!iCamProps) {
-    ORIGINATE_ERROR("Failed to create camera properties");
-  }
-
-  NONZERO_RETURN_FALSE(iCamProps->getAllSensorModes(&modes));
-  src->total_sensor_modes = modes.size();
-  GST_INFO("Checking sensor-mode is valid");
-  if (src->sensor_mode >= modes.size()) {
-    ORIGINATE_ERROR("Invalid sensor mode %zu selected %zu present",
-                    src->sensor_mode, modes.size());
-  }
-
-  // Get sensor mode we will use, and it's interface
-  auto mode = modes[src->sensor_mode];
-  auto iMode = interface_cast<ISensorMode>(mode);
-
-  // get the resolution and supported frame duration range
-  auto resolution = iMode->getResolution();
-  auto f_duration = iMode->getFrameDurationRange();
-
-  // update info, so caps are fixated properly
-  src->info.width = resolution.width();
-  src->info.height = resolution.height();
-  src->info.fps_n = round(1000000000 / f_duration.min());
 
   GST_INFO("Getting SourceSettings from Request");
   iSourceSettings =
@@ -311,19 +316,12 @@ bool producer(GstNvManualCameraSrc* src) {
   }
 
   if (src->awbLockPropSet) {
-    if (src->controls.AwbLock) {
-      NONZERO_ERROR(iAutoControlSettings->setAwbLock(true));
-    } else {
-      NONZERO_ERROR(iAutoControlSettings->setAwbLock(false));
-    }
+    NONZERO_ERROR(iAutoControlSettings->setAwbLock(src->controls.AwbLock));
     src->awbLockPropSet = FALSE;
   }
 
   if (src->aeLockPropSet) {
-    if (src->controls.AeLock)
-      NONZERO_ERROR(iAutoControlSettings->setAeLock(true));
-    else
-      NONZERO_ERROR(iAutoControlSettings->setAeLock(false));
+    NONZERO_ERROR(iAutoControlSettings->setAeLock(src->controls.AeLock));
     src->aeLockPropSet = FALSE;
   }
 
