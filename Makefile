@@ -31,7 +31,7 @@ CC := g++
 GST_INSTALL_DIR?=/usr/lib/aarch64-linux-gnu/gstreamer-1.0/
 LIB_INSTALL_DIR?=/usr/lib/aarch64-linux-gnu/tegra/
 CFLAGS:=
-LIBS:= -lnvbuf_utils -lnvdsbufferpool -lnvargus -lpthread
+LIBS:= -lnvbuf_utils -lnvdsbufferpool -lnvargus_socketclient -lpthread
 
 SRCS := $(wildcard ./src/*.cpp)
 
