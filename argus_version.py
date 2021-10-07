@@ -15,7 +15,7 @@ def argus_version():
     try:
         cp = subprocess.run(
             ('apt-cache', 'policy', 'nvidia-l4t-jetson-multimedia-api'),
-            stdout=subprocess.PIPE)
+            stdout=subprocess.PIPE, env={"LANG": "C"})
         cp.check_returncode()
         for line in cp.stdout.decode().split(os.linesep):
             # this will break on non-english systems, but fixing it not possible
