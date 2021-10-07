@@ -26,22 +26,16 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef A6479C9D_8364_49AA_B5B3_889C52B6889D
-#define A6479C9D_8364_49AA_B5B3_889C52B6889D
+#ifndef BD8F635C_B1D2_480C_8963_B6D87CBA8D76
+#define BD8F635C_B1D2_480C_8963_B6D87CBA8D76
 
-/* PACKAGE: this is usually set by autotools depending on some _INIT macro
- * in configure.ac and then written into and defined in config.h, but we can
- * just set it ourselves here in case someone doesn't use autotools to
- * compile this code. GST_PLUGIN_DEFINE needs PACKAGE to be defined.
- */
-#ifndef PACKAGE
-#define PACKAGE "nvarguscamerasrc"
-#endif
+#include "gstnvmanualcamerasrc.hpp"
+#include "Argus/Argus.h"
 
-#ifdef MESON
-#include "gstnvarguscamera_config_meson.h"
-#else
-#include "gstnvarguscamera_config_make.h"
-#endif
+namespace nvmanualcam {
 
-#endif /* A6479C9D_8364_49AA_B5B3_889C52B6889D */
+bool producer(GstNvManualCameraSrc* self);
+
+}  // namespace nvmanualcam
+
+#endif /* BD8F635C_B1D2_480C_8963_B6D87CBA8D76 */

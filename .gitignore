@@ -2,3 +2,8 @@
 *.o
 builddir/
 .vscode/
+*.dot
+*.png
+*.pdf
+
+subprojects/*/

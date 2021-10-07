@@ -22,14 +22,14 @@
 # truth
 
 #define PROJ_VER "1.0.0"
-#define PROJ_DESCRIPTION "nVidia ARGUS Camera Source"
-#define BINARY_PACKAGE "NvARGUSCameraSrc"
-#define PROJ_URL "https://github.com/mdegans/gst-nvarguscamerasrc"
+#define PROJ_DESCRIPTION "nVidia MANUAL Camera Source"
+#define BINARY_PACKAGE "NvMANUALCameraSrc"
+#define PROJ_URL "https://github.com/mdegans/gst-nvmanualcamerasrc"
 #define LICENSE "Proprietary"
 
-gstnvarguscamera_config_meson_h = configure_file(
-  input: 'gstnvarguscamera_config_meson.h.in',
-  output: 'gstnvarguscamera_config_meson.h',
+gstnvmanualcamera_config_meson_h = configure_file(
+  input: 'gstnvmanualcamera_config_meson.h.in',
+  output: 'gstnvmanualcamera_config_meson.h',
   configuration: {
     'proj_ver': meson.project_version(),
     'proj_description': proj_description,
@@ -40,7 +40,16 @@ gstnvarguscamera_config_meson_h = configure_file(
 )
 
 # this tells our config.h to use our completed template
-gstnvarguscamerasrc_cflags = ['-DMESON']
+gstnvmanualcamerasrc_cflags = ['-DMESON']
+gstnvmanualcamerasrc_public_cflags = []
 
 # a variable pointing to this dir
-gstnvarguscamerasrc_incdir = include_directories('.')
+gstnvmanualcamerasrc_incdir = include_directories('.')
+gstnvmanualcamerasrc_public_incdir = include_directories('public')
+gstnvmanualcamerasrc_incdirs = [
+  gstnvmanualcamerasrc_incdir,
+  gstnvmanualcamerasrc_public_incdir,
+]
+
+# headers to install
+subdir('public')

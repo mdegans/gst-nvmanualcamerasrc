@@ -1,5 +1,5 @@
-# Copyright (c) 2020, NVIDIA CORPORATION. All rights reserved.
-
+# Copyright (c) 2016-2018, NVIDIA CORPORATION. All rights reserved.
+#
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
 # are met:
@@ -11,7 +11,7 @@
 #  * Neither the name of NVIDIA CORPORATION nor the names of its
 #    contributors may be used to endorse or promote products derived
 #    from this software without specific prior written permission.
-
+#
 # THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS ``AS IS'' AND ANY
 # EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
 # IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
@@ -24,51 +24,30 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-SO_NAME := libgstnvarguscamerasrc.so
+# - Try to find OpenGLES
+# Once done this will define
+#  OPENGLES_FOUND - System has OpenGLES
+#  OPENGLES_INCLUDE_DIRS - The OpenGLES include directories
+#  OPENGLES_LIBRARIES - The libraries needed to use OpenGLES
+#  OPENGLES_DEFINITIONS - Compiler switches required for using OpenGLES
 
-CC := g++
+find_package(PkgConfig)
 
-GST_INSTALL_DIR?=/usr/lib/aarch64-linux-gnu/gstreamer-1.0/
-LIB_INSTALL_DIR?=/usr/lib/aarch64-linux-gnu/tegra/
-CFLAGS:=
-LIBS:= -lnvbuf_utils -lnvdsbufferpool -lnvargus -lpthread
+find_path(OPENGLES_INCLUDE_DIR GLES3/gl3.h
+  HINTS
+    /usr/src/jetson_multimedia_api/argus/include
+    /usr/src/jetson_multimedia_api/include
+)
 
-SRCS := $(wildcard ./src/*.cpp)
+find_library(OPENGLES_LIBRARY NAMES libGLESv2.so.2)
 
-INCLUDES += -I./include
+set(OPENGLES_LIBRARIES ${OPENGLES_LIBRARY})
+set(OPENGLES_INCLUDE_DIRS ${OPENGLES_INCLUDE_DIR})
 
-# Include jetson_mm_api include path
-INCLUDES += -I/usr/src/jetson_multimedia_api/include/
-INCLUDES += -I/usr/src/jetson_multimedia_api/argus/samples/utils/
+include(FindPackageHandleStandardArgs)
+# handle the QUIETLY and REQUIRED arguments and set OPENGLES_FOUND to TRUE
+# if all listed variables are TRUE
+find_package_handle_standard_args(OpenGLES DEFAULT_MSG
+                                  OPENGLES_LIBRARY OPENGLES_INCLUDE_DIR)
 
-PKGS := gstreamer-1.0 \
-	gstreamer-base-1.0 \
-	gstreamer-video-1.0 \
-	gstreamer-allocators-1.0 \
-	glib-2.0
-
-OBJS := $(SRCS:.cpp=.o)
-
-CFLAGS += -fPIC
-
-CFLAGS += `pkg-config --cflags $(PKGS)`
-
-LDFLAGS = -Wl,--no-undefined -L$(LIB_INSTALL_DIR) -Wl,-rpath,$(LIB_INSTALL_DIR)
-
-LIBS += `pkg-config --libs $(PKGS)`
-
-all: $(SO_NAME)
-
-%.o: %.cpp
-	$(CC) -c $< $(CFLAGS) $(INCLUDES) -o $@
-
-$(SO_NAME): $(OBJS)
-	$(CC) -shared -o $(SO_NAME) $(OBJS) $(LIBS) $(LDFLAGS)
-
-.PHONY: install
-install: $(SO_NAME)
-	cp -vp $(SO_NAME) $(GST_INSTALL_DIR)
-
-.PHONY: clean
-clean:
-	rm -rf $(OBJS) $(SO_NAME)
+mark_as_advanced(OPENGLES_INCLUDE_DIR OPENGLES_LIBRARY)
