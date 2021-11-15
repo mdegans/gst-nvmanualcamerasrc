@@ -36,3 +36,7 @@ subdir('googletest')
 subdir('gst-check')
 subdir('exitcode')
 subdir('gst-launch')
+if python3.found() and dependency('python3', required: false).found()
+  test_envs += 'PYMOD_PATH=' + pymod_path
+  subdir('python')
+endif

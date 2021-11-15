@@ -139,3 +139,23 @@ libgstnvmanualcamerasrc = library(meson.project_name(), gstnvmanualcamerasrc_src
   install_dir: gst_install_dir,
   cpp_args: [gstnvmanualcamerasrc_cflags, gstnvmanualcamera_metadata_cflags],
 )
+
+python3 = import('python').find_installation('python3')
+if python3.found() and dependency('python3', required:false).found()
+  message('Building `nvmanual` python3 module.')
+  pymod = python3.extension_module('nvmanual',
+    sources: ['pymod.cpp'],
+    dependencies: [
+      dependency('python3'),
+      dependency('pybind11'),
+      gstnvmanualcamera_metadata_deps,
+    ],
+    link_with: libgstnvmanualcamerameta,
+    include_directories: [gstnvmanualcamerasrc_incdirs, mmapi_incdirs],
+    cpp_args: gstnvmanualcamera_metadata_cflags,
+    install: true,
+  )
+  pymod_path = meson.current_build_dir()
+else
+  message('Python3 not found. Not building python module.')
+endif
