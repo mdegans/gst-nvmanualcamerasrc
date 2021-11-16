@@ -13,13 +13,6 @@ class TestRectangle(unittest.TestCase):
         "IntRectangle": int,
     }
 
-    PROPS = (
-        'left',
-        'top',
-        'right',
-        'bottom'
-    )
-
     def test_rectangle_values(self):
         for clsname, T in self.TEMPLATE_MAP.items():
             values = {
@@ -29,7 +22,7 @@ class TestRectangle(unittest.TestCase):
                 'bottom': T(4),
             }
             with self.subTest(clsname):
-                cls = getattr(nvmanual, clsname)
+                cls = getattr(nvmanual.argus, clsname)
                 rect = cls(**values)
                 for k, v in values.items():
                     self.assertEqual(getattr(rect, k), v)

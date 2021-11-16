@@ -10,10 +10,10 @@
 #include "pybind11/pybind11.h"
 #include "pybind11/operators.h"
 #include "pybind11/cast.h"
-#include "pybind11/detail/common.h"
+#include "pybind11/stl.h"
+#include "pybind11/pytypes.h"
 
 #include "metadata.hpp"
-#include "pybind11/pytypes.h"
 
 namespace py = pybind11;
 
@@ -29,12 +29,25 @@ void declare_rectangle(py::module& m, std::string typestr) {
 }
 
 
+// because pybind doesn't detect this correctly on ubuntu 20.04 (or 18.04)]
+// (or I am doing something wrong). absl::optional or boost::optional can
+// also work
+// https://pybind11.readthedocs.io/en/stable/advanced/cast/stl.html#c-17-library-containers
+namespace pybind11 {
+namespace detail {
+template <typename T>
+struct type_caster<std::experimental::optional<T>>
+    : optional_caster<std::experimental::optional<T>> {};
+}  // namespace detail
+}  // namespace pybind11
+
+
 PYBIND11_MODULE(nvmanual, m) {
 
-  py::module argus = m.def_submodule("argus", "Unofficial Argus bindings");
+  py::module m_argus = m.def_submodule("argus", "Unofficial Argus bindings");
 
-  declare_rectangle<float>(argus, "Float");  // argus.FloatRectangle
-  declare_rectangle<uint32_t>(argus, "Int");  // argus.IntRectangle
+  declare_rectangle<float>(m_argus, "Float");  // argus.FloatRectangle
+  declare_rectangle<uint32_t>(m_argus, "Int");  // argus.IntRectangle
 
   py::class_<nvmanualcam::Metadata> c_metadata(m, "Metadata");
   c_metadata.def_static("from_buffer", [](py::object pygobject_buf) {
@@ -50,8 +63,12 @@ PYBIND11_MODULE(nvmanual, m) {
     }, py::arg("buf")).doc() = "create nvmanual.Metadata from a Gst.Buffer";
     // .def("bayer_histogram", &nvmanualcam::Metadata::getBayerHistogram)
     // .def("rgb_histogram", &nvmanualcam::Metadata::getRgbHistogram)
-  c_metadata.def("scene_lux", &nvmanualcam::Metadata::getSceneLux);
-    // .def("sharpness_values", &nvmanualcam::Metadata::getSharpnessValues)
+  c_metadata.def_property_readonly("scene_lux", &nvmanualcam::Metadata::getSceneLux);
+  c_metadata.def(
+    "sharpness_score",
+    py::overload_cast<Argus::Rectangle<float>>(&nvmanualcam::Metadata::getSharpnessScore),
+    py::arg("rect") = Argus::Rectangle<float>(0.0, 0.0, 1.0, 1.0)
+  ).doc() = "Get the sharpness score for the image or a ROI within it.";
     // .def("tonemap_curve", &nvmanualcam::Metadata::getToneMapCurves)
     // .def("color_correction_matrix", &nvmanualcam::Metadata::getBayerHistogram);
 }

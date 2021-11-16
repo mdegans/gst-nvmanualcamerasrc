@@ -14,35 +14,52 @@ sys.path.append(PYMOD_PATH)
 
 import nvmanual
 
+# switched to 1 on error
+retcode = 0
+
+
 def metadata_probe(pad: Gst.Pad, info: Gst.PadProbeInfo, data: Any):
     # todo: comprehensive checks of each
-    meta = nvmanual.Metadata.from_buffer(info.get_buffer())
-    assert meta is not None
+    try:
+        meta = nvmanual.Metadata.from_buffer(info.get_buffer())
+        assert meta is not None
 
-    # b_hist = meta.bayer_histogram()
-    # assert b_hist is not None
+        # b_hist = meta.bayer_histogram()
+        # assert b_hist is not None
 
-    # rgb_hist = meta.rgb_histogram()
-    # assert rgb_hist is not None
+        # rgb_hist = meta.rgb_histogram()
+        # assert rgb_hist is not None
 
-    lux = meta.scene_lux()
-    assert type(lux) is float
-    print(f"scene lux: {lux}")
+        lux = meta.scene_lux
+        assert type(lux) is float
+        print(f"scene lux: {lux}")
 
-    # s_values = meta.sharpness_values()
-    # assert s_values is not None
+        # sharpness using the default ROI (entire image)
+        sharpness = meta.sharpness_score()
+        assert type(sharpness) is float
+        print(f"scene sharpness: {sharpness}")
 
-    # t_curve = meta.tonemap_curve()
-    # assert t_curve is not None
+        # sharpness using just a ROI crop
+        roi = nvmanual.argus.FloatRectangle(0.4, 0.4, 0.6, 0.6)
+        roi_sharpness = meta.sharpness_score(roi)
+        assert type(roi_sharpness) is float
+        print(f"roi sharpness: {roi_sharpness}")
 
-    # ccx = meta.color_correction_matrix()
-    # assert ccx is not None
+        # t_curve = meta.tonemap_curve()
+        # assert t_curve is not None
+
+        # ccx = meta.color_correction_matrix()
+        # assert ccx is not None
+    except AssertionError:
+        retcode = 1
 
     return Gst.PadProbeReturn.OK
 
 
 def main():
     Gst.init(None)
+
+    global retcode
 
     pipe = Gst.Pipeline.new()
     try:
@@ -76,10 +93,13 @@ def main():
         msg = bus.timed_pop_filtered(Gst.CLOCK_TIME_NONE, (Gst.MessageType.ERROR | Gst.MessageType.EOS))
         assert msg.type == Gst.MessageType.EOS
 
+    except AssertionError:
+        retcode = 1
+
     finally:
         assert pipe.set_state(Gst.State.NULL) != Gst.StateChangeReturn.FAILURE
 
-    return 0
+    return retcode
 
 if __name__ == "__main__":
     import sys
