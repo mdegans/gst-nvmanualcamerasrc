@@ -60,13 +60,16 @@ def metadata_probe(pad: Gst.Pad, info: Gst.PadProbeInfo, data: Any):
         assert type(roi_sharpness) is float
         print(f"roi sharpness: {roi_sharpness}")
 
-        # t_curve = meta.tonemap_curve()
+        t_curve = meta.tonemap_curves()
+        # FIXME(mdegans): not very important for client's purpose but in the
+        # future it might be.
         # assert t_curve is not None
+        print(f"tonemap curves: {t_curve}")
 
         # ccx = meta.color_correction_matrix()
         # assert ccx is not None
-    except AssertionError as e:
-        print(e)
+    except Exception as e:
+        print(e, flush=True)
         retcode = 1
 
     return Gst.PadProbeReturn.OK

@@ -94,6 +94,6 @@ PYBIND11_MODULE(nvmanual, m) {
     py::overload_cast<Argus::Rectangle<float>>(&nvmanualcam::Metadata::getSharpnessScore),
     py::arg("rect") = Argus::Rectangle<float>(0.0, 0.0, 1.0, 1.0)
   ).doc() = "Get the sharpness score for the image or a ROI within it.";
-    // .def("tonemap_curve", &nvmanualcam::Metadata::getToneMapCurves)
-    // .def("color_correction_matrix", &nvmanualcam::Metadata::getBayerHistogram);
+  c_metadata.def("tonemap_curves", &nvmanualcam::Metadata::getToneMapCurves)
+    .doc() = "Get tonemap curves (if enabled, else retursn None)";
 }
