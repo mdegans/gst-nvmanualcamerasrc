@@ -71,6 +71,15 @@ PYBIND11_MODULE(nvmanual, m) {
   declare_bayer_tuple<float>(m_argus, "Float");  // argus.FloatBayerTuple
   declare_bayer_tuple<uint32_t>(m_argus, "Int");  // argus.IntBayerTuple
 
+  // This isn't an enum because Nvidia rolled it's own C++ 03 thing.
+  // FIXME(mdegans): figure out how to bind this
+  // py::enum_<Argus::AeState>(m_argus, "AeState")
+  //   .value("INACTIVE", Argus::AE_STATE_INACTIVE)
+  //   .value("SEARCHING", Argus::AE_STATE_SEARCHING)
+  //   .value("CONVERGED", Argus::AE_STATE_CONVERGED)
+  //   .value("FLASH_REQUIRED", Argus::AE_STATE_FLASH_REQUIRED)
+  //   .value("TIMEOUT", Argus::AE_STATE_TIMEOUT);  // argus.AeState
+
   py::class_<nvmanualcam::Metadata> c_metadata(m, "Metadata");
   c_metadata.def_static("from_buffer", [](py::object pygobject_buf) {
       // reinterpret_cast is now Nvidia does this in the `nvds` bindings.
@@ -96,4 +105,42 @@ PYBIND11_MODULE(nvmanual, m) {
   ).doc() = "Get the sharpness score for the image or a ROI within it.";
   c_metadata.def("tonemap_curves", &nvmanualcam::Metadata::getToneMapCurves)
     .doc() = "Get tonemap curves (if enabled, else retursn None)";
+  c_metadata.def_property_readonly("ae_locked", &nvmanualcam::Metadata::getAeLocked)
+    .doc() = "Returns true if Auto Exposure was locked for this capture.";
+  // c_metadata.def_property_readonly("ae_state", &nvmanualcam::Metadata::getAeState)
+  //   .doc() = "Get Auto Exposure state for this capture";
+  c_metadata.def_property_readonly("awb_cct", &nvmanualcam::Metadata::getAwbCct)
+    .doc() = "Get Auto White Balance CCT (color temperature in Kelvin)";
+  c_metadata.def_property_readonly("awb_gains", &nvmanualcam::Metadata::getAwbGains)
+    .doc() = "Get Auto White Balance gains.";
+  // TODO(AE Regions and Argus::AcRegion)
+  // TODO(AWB Regions, AWB Mode, AWB State)
+  c_metadata.def("awb_estimate", &nvmanualcam::Metadata::getAwbWbEstimate)
+    .doc() = "Get Auto White Balance estimate (if available, else returns None)";
+  c_metadata.def_property_readonly("capture_id", &nvmanualcam::Metadata::getCaptureId)
+    .doc() = "Get capture id (close, but not quite the frame number)";
+  c_metadata.def("color_correction_matrix", &nvmanualcam::Metadata::getColorCorrectionMatrix)
+    .doc() = "Get color correction matrix for this capture (if available else None()";
+  c_metadata.def_property_readonly("color_correction_matrix_enable", &nvmanualcam::Metadata::getColorCorrectionMatrixEnable)
+    .doc() = "Returns true if color correction matrix is enabled for this capture.";
+  c_metadata.def_property_readonly("saturation", &nvmanualcam::Metadata::getColorSaturation)
+    .doc() = "Get saturation for this capture (0.0 - 1.0)";
+  // TODO(Argus::AeFlickerState)
+  c_metadata.def_property_readonly("focuser_position", &nvmanualcam::Metadata::getFocuserPosition)
+    .doc() = "Get focuser position (if applicable, else value is useless)";
+  c_metadata.def_property_readonly("frame_duration", &nvmanualcam::Metadata::getFrameDuration)
+    .doc() = "Get the duration it took to generate the associated frame in NS";
+  c_metadata.def_property_readonly("frame_readout_time", &nvmanualcam::Metadata::getFrameReadoutTime)
+    .doc() = "Get the frame readout time in NS.";
+  c_metadata.def_property_readonly("isp_digital_gain", &nvmanualcam::Metadata::getIspDigitalGain)
+    .doc() = "Get the ISP digital gain for this capture.";
+  c_metadata.def_property_readonly("sensor_analog_gain", &nvmanualcam::Metadata::getSensorAnalogGain)
+    .doc() = "Get the analog gain for this capture.";
+  c_metadata.def_property_readonly("sensor_exposure_time", &nvmanualcam::Metadata::getSensorExposureTime)
+    .doc() = "Get the sensor exposure time (in NS)";
+  c_metadata.def_property_readonly("sensor_sensitivity", &nvmanualcam::Metadata::getSensorSensitivity)
+    .doc() = "Get the sensor sensitivity (ISO value)";
+  c_metadata.def_property_readonly("sensor_timestamp", &nvmanualcam::Metadata::getSensorTimestamp)
+    .doc() = "Get the sensor timestamp.";
+  // TODO(Argus::Array2D, getSharpnessValues)
 }

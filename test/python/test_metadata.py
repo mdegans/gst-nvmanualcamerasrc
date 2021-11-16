@@ -27,6 +27,11 @@ def metadata_probe(pad: Gst.Pad, info: Gst.PadProbeInfo, data: Any):
         meta = nvmanual.Metadata.from_buffer(info.get_buffer())
         assert meta is not None
 
+        # Capture ID is like the frame number but not quite. It starts count at
+        # 1 and is always positive. Internally it's a u32
+        assert type(meta.capture_id) is int
+        print(f"capture id: {meta.capture_id}")
+
         # a Bayer histogram is normally available. This is a 256 element list
         # where a bayer value is the index and the returning tuple contains
         # counts for that value.
@@ -83,10 +88,60 @@ def metadata_probe(pad: Gst.Pad, info: Gst.PadProbeInfo, data: Any):
         # assert t_curve is not None
         print(f"tonemap curves: {t_curve}")
 
-        # ccx = meta.color_correction_matrix()
-        # assert ccx is not None
+        assert type(meta.ae_locked) is bool
+
+        # see fixme in pymod.cpp
+        # assert type(meta.ae_state) is nvmanual.argus.AeState
+
+        assert type(meta.awb_cct) is int
+        print(f"AWB color temperature: {meta.awb_cct}")
+
+        awb_gains = meta.awb_gains
+        assert type(awb_gains) is nvmanual.argus.FloatBayerTuple
+        print(f"AWB gains: ({awb_gains.r}, {awb_gains.g_even}, {awb_gains.g_odd}, {awb_gains.b})")
+
+        awb_estimate = meta.awb_estimate()
+        assert type(awb_estimate) is list
+        assert type(awb_estimate[0]) is float
+        print(f"AWB estimate: {awb_estimate}")
+
+        ccx = meta.color_correction_matrix()
+        print(f"color correction matrix: {ccx}")
+
+        assert type(meta.color_correction_matrix_enable) is bool
+        print(f"color correction matrix enabled: {meta.color_correction_matrix_enable}")
+
+        assert type(meta.saturation) is float
+        print(f"saturation: {meta.saturation}")
+
+        # this is not applicable to most setups
+        assert type(meta.focuser_position) is int
+        print(f"focuser position: {meta.focuser_position}")
+
+        assert type(meta.frame_duration) is int
+        print(f"frame duration: {meta.frame_duration}")
+
+        assert type(meta.frame_readout_time) is int
+        print(f"frame readout time: {meta.frame_readout_time}")
+
+        assert type(meta.isp_digital_gain) is float
+        print(f"ISP digital gain: {meta.isp_digital_gain}")
+
+        assert type(meta.sensor_analog_gain) is float
+        print(f"sensor analog gain: {meta.sensor_analog_gain}")
+
+        assert type(meta.sensor_exposure_time) is int
+        print(f"sensor exposure time: {meta.sensor_exposure_time}")
+
+        assert type(meta.sensor_sensitivity) is int
+        print(f"ISO value: {meta.sensor_sensitivity}")
+
+        assert type(meta.sensor_timestamp) is int
+        print(f"sensor timestamp: {meta.sensor_timestamp}")
     except Exception as e:
-        print(e, flush=True)
+        # This is always printing nothing. Not sure why. Prolly did a dumb or
+        # printing can't work in this callback.
+        print(e, file=sys.stderr, flush=True)
         retcode = 1
 
     return Gst.PadProbeReturn.OK
