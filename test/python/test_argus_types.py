@@ -12,7 +12,7 @@ import nvmanual
 class TestRectangle(unittest.TestCase):
     TYPES = (float, int)
     TEMPLATE_MAP = {
-        f"{t.__class__.__name__.capitalize()}Rectangle": t for t in TYPES
+        f"{t.__name__.capitalize()}Rectangle": t for t in TYPES
     }
 
     def test_rectangle_values(self):
@@ -33,7 +33,7 @@ class TestRectangle(unittest.TestCase):
 class TestRGBTuple(unittest.TestCase):
     TYPES = (float, int)
     TEMPLATE_MAP = {
-        f"{t.__class__.__name__.capitalize()}RGBTuple": t for t in TYPES
+        f"{t.__name__.capitalize()}RGBTuple": t for t in TYPES
     }
 
     def test_rgb_tuple(self):
@@ -53,7 +53,7 @@ class TestRGBTuple(unittest.TestCase):
 class TestBayerTuple(unittest.TestCase):
     TYPES = (float, int)
     TEMPLATE_MAP = {
-        f"{t.__class__.__name__.capitalize()}BayerTuple": t for t in TYPES
+        f"{t.__name__.capitalize()}BayerTuple": t for t in TYPES
     }
 
     def test_rgb_tuple(self):
@@ -69,3 +69,51 @@ class TestBayerTuple(unittest.TestCase):
                 bayer_tuple = cls(**values)
                 for k, v in values.items():
                     self.assertEqual(getattr(bayer_tuple, k), v)
+
+
+class TestArray2D(unittest.TestCase):
+    SUBTYPES = (
+        nvmanual.argus.FloatBayerTupleArray2D,
+    )
+
+    def test_from_xy(self):
+        # also tests __len__
+        sz = 16
+        for t in self.SUBTYPES:
+            with self.subTest(t.__class__.__name__):
+                i = t.from_xy(x=sz, y=sz)
+                self.assertIsInstance(i, t)
+                self.assertEqual(sz * sz, len(i))
+
+    def test_at(self):
+        sz = 16
+        for t in self.SUBTYPES:
+            with self.subTest(t.__class__.__name__):
+                i = t.from_xy(x=sz, y=sz)
+                e = i.at(x=0, y=0)
+                e = i.at(x=sz - 1, y=sz - 1)
+                with self.assertRaises(IndexError):
+                    i.at(x=sz, y=0)
+                with self.assertRaises(IndexError):
+                    i.at(x=0, y=16)
+
+    def test_getitem(self):
+        sz = 16
+        for t in self.SUBTYPES:
+            with self.subTest(t.__class__.__name__):
+                i = t.from_xy(x=sz, y=sz)
+                e = i[0]
+                e = i[sz * sz - 1]
+                with self.assertRaises(IndexError):
+                    i[sz * sz]
+
+    def test_iter(self):
+        sz = 16
+        for t in self.SUBTYPES:
+            with self.subTest(t.__class__.__name__):
+                i = t.from_xy(x=sz, y=sz)
+                for e in i:
+                    self.assertIsInstance(e, nvmanual.argus.FloatBayerTuple)
+
+if __name__ == "__main__":
+    unittest.main()

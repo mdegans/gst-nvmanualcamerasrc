@@ -56,7 +56,7 @@ void declare_array_2d(py::module& m, std::string typestr) {
     py::class_<Argus::Array2D<T>>(m, (typestr + "Array2D").c_str())
       .def_static("from_xy", [](uint32_t x, uint32_t y){
         return std::make_unique<Argus::Array2D<T>>(Argus::Size2D(x, y));
-      })
+      }, py::arg("x"), py::arg("y"))
       .def("__len__", [](const Argus::Array2D<T> &a){ return a.size().area(); })
       .def("__iter__", [](const Argus::Array2D<T> &a) {
         return py::make_iterator(a.begin(), a.end());
