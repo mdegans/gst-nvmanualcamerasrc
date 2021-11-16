@@ -9,19 +9,18 @@ import nvmanual
 
 # TODO(mdegans): these test cases can probably be programmatically created
 
+
 class TestRectangle(unittest.TestCase):
     TYPES = (float, int)
-    TEMPLATE_MAP = {
-        f"{t.__name__.capitalize()}Rectangle": t for t in TYPES
-    }
+    TEMPLATE_MAP = {f"{t.__name__.capitalize()}Rectangle": t for t in TYPES}
 
     def test_rectangle_values(self):
         for clsname, T in self.TEMPLATE_MAP.items():
             values = {
-                'left': T(1),
-                'top': T(2),
-                'right': T(3),
-                'bottom': T(4),
+                "left": T(1),
+                "top": T(2),
+                "right": T(3),
+                "bottom": T(4),
             }
             with self.subTest(clsname):
                 cls = getattr(nvmanual.argus, clsname)
@@ -32,16 +31,14 @@ class TestRectangle(unittest.TestCase):
 
 class TestRGBTuple(unittest.TestCase):
     TYPES = (float, int)
-    TEMPLATE_MAP = {
-        f"{t.__name__.capitalize()}RGBTuple": t for t in TYPES
-    }
+    TEMPLATE_MAP = {f"{t.__name__.capitalize()}RGBTuple": t for t in TYPES}
 
     def test_rgb_tuple(self):
         for clsname, T in self.TEMPLATE_MAP.items():
             values = {
-                'r': T(1),
-                'g': T(2),
-                'b': T(3),
+                "r": T(1),
+                "g": T(2),
+                "b": T(3),
             }
             with self.subTest(clsname):
                 cls = getattr(nvmanual.argus, clsname)
@@ -52,17 +49,15 @@ class TestRGBTuple(unittest.TestCase):
 
 class TestBayerTuple(unittest.TestCase):
     TYPES = (float, int)
-    TEMPLATE_MAP = {
-        f"{t.__name__.capitalize()}BayerTuple": t for t in TYPES
-    }
+    TEMPLATE_MAP = {f"{t.__name__.capitalize()}BayerTuple": t for t in TYPES}
 
     def test_rgb_tuple(self):
         for clsname, T in self.TEMPLATE_MAP.items():
             values = {
-                'r': T(1),
-                'g_even': T(2),
-                'g_odd': T(3),
-                'b': T(4),
+                "r": T(1),
+                "g_even": T(2),
+                "g_odd": T(3),
+                "b": T(4),
             }
             with self.subTest(clsname):
                 cls = getattr(nvmanual.argus, clsname)
@@ -72,9 +67,7 @@ class TestBayerTuple(unittest.TestCase):
 
 
 class TestArray2D(unittest.TestCase):
-    SUBTYPES = (
-        nvmanual.argus.FloatBayerTupleArray2D,
-    )
+    SUBTYPES = (nvmanual.argus.FloatBayerTupleArray2D,)
 
     def test_from_xy(self):
         # also tests __len__
@@ -114,6 +107,7 @@ class TestArray2D(unittest.TestCase):
                 i = t.from_xy(x=sz, y=sz)
                 for e in i:
                     self.assertIsInstance(e, nvmanual.argus.FloatBayerTuple)
+
 
 if __name__ == "__main__":
     unittest.main()
