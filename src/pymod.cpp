@@ -18,23 +18,23 @@
 namespace py = pybind11;
 
 // // https://stackoverflow.com/questions/47487888/pybind11-template-class-of-many-types/47749076
-// template <typename T>
-// void declare_rectangle(py::module& m, std::string typestr) {
-//   py::class_<Argus::Rectangle<T>>(m, typestr + std::string("Rectangle"))
-//     .def(py::init<T, T, T, T>(), py::arg("left"), py::arg("top"), py::arg("right"), py::arg("bottom"))
-//     .def_property_readonly("left", py::overload_cast<>(&Argus::Rectangle<T>::left))
-//     .def_property_readonly("top", py::overload_cast<>(&Argus::Rectangle<T>::top))
-//     .def_property_readonly("right", py::overload_cast<>(&Argus::Rectangle<T>::right))
-//     .def_property_readonly("bottom", py::overload_cast<>(&Argus::Rectangle<T>::bottom));
-// }
+template <typename T>
+void declare_rectangle(py::module& m, std::string typestr) {
+  py::class_<Argus::Rectangle<T>>(m, (typestr + std::string("Rectangle")).c_str())
+    .def(py::init<T, T, T, T>(), py::arg("left"), py::arg("top"), py::arg("right"), py::arg("bottom"))
+    .def_property_readonly("left", py::overload_cast<>(&Argus::Rectangle<T>::left))
+    .def_property_readonly("top", py::overload_cast<>(&Argus::Rectangle<T>::top))
+    .def_property_readonly("right", py::overload_cast<>(&Argus::Rectangle<T>::right))
+    .def_property_readonly("bottom", py::overload_cast<>(&Argus::Rectangle<T>::bottom));
+}
 
 
 PYBIND11_MODULE(nvmanual, m) {
 
   py::module argus = m.def_submodule("argus", "Unofficial Argus bindings");
 
-  // declare_rectangle<float>(argus, "Float");  // argus.FloatRectangle
-  // declare_rectangle<uint32_t>(argus, "Int");  // argus.IntRectangle
+  declare_rectangle<float>(argus, "Float");  // argus.FloatRectangle
+  declare_rectangle<uint32_t>(argus, "Int");  // argus.IntRectangle
 
   py::class_<nvmanualcam::Metadata> c_metadata(m, "Metadata");
   c_metadata.def_static("from_buffer", [](py::object pygobject_buf) {

@@ -1,4 +1,5 @@
 python_tests = [
+  'test_argus_types.py',
   'test_metadata.py',
 ]
 
