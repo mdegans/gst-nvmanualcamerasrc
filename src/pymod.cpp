@@ -1,11 +1,15 @@
+#include <bits/stdint-uintn.h>
+#include <sstream>
 #include <stdexcept>
 #include <string>
-// #include <Argus/Argus.h>
-// #include <bits/stdint-uintn.h>
+#include <memory>
+
+#include <Argus/Argus.h>
 
 #include "gst/gst.h"
 #include "gst/gstbuffer.h"
 
+// #include "pybind11/attr.h"
 #include "pybind11/pybind11.h"
 #include "pybind11/detail/common.h"
 #include "pybind11/operators.h"
@@ -47,6 +51,41 @@ void declare_bayer_tuple(py::module& m, std::string typestr) {
     .def_property_readonly("b", py::overload_cast<>(&Argus::BayerTuple<T>::b));
 }
 
+template <typename T>
+void declare_array_2d(py::module& m, std::string typestr) {
+    py::class_<Argus::Array2D<T>>(m, (typestr + "Array2D").c_str())
+      .def_static("from_xy", [](uint32_t x, uint32_t y){
+        return std::make_unique<Argus::Array2D<T>>(Argus::Size2D(x, y));
+      })
+      .def("__len__", [](const Argus::Array2D<T> &a){ return a.size().area(); })
+      .def("__iter__", [](const Argus::Array2D<T> &a) {
+        return py::make_iterator(a.begin(), a.end());
+      }, py::keep_alive<0, 1>())
+      .def("__getitem__", [](const Argus::Array2D<T> &a, uint32_t index) {
+        // We need to raise a python error since the assert in Types.h can't be
+        // caught.  checkIndex being public would have been handy here.
+        if (index >= a.size().area()) {
+          std::stringstream ss;
+          ss << "Index " << index << " is out of range for this Array2D (max " << a.size().area() << ")";
+          throw py::index_error(ss.str());
+        }
+        return a[index];
+      })
+      .def("at", [](const Argus::Array2D<T> a, uint32_t x, uint32_t y) {
+        if (x >= a.size().width()) {
+          std::stringstream ss;
+          ss << "X index is out of range for this Array2d (max " << a.size().width() << ")";
+          throw py::index_error(ss.str());
+        }
+        if (y >= a.size().height()) {
+          std::stringstream ss;
+          ss << "Y index is out of range for this Array2d (max " << a.size().height() <<  ")";
+          throw py::index_error(ss.str());
+        }
+        return a(x, y);
+      }, py::arg("x"), py::arg("y")).doc() = "Access elements by x, y";
+}
+
 // because pybind doesn't detect this correctly on ubuntu 20.04 (or 18.04)]
 // (or I am doing something wrong). absl::optional or boost::optional can
 // also work
@@ -70,6 +109,7 @@ PYBIND11_MODULE(nvmanual, m) {
   declare_rgb_tuple<uint32_t>(m_argus, "Int");  // argus.IntRGBTuple
   declare_bayer_tuple<float>(m_argus, "Float");  // argus.FloatBayerTuple
   declare_bayer_tuple<uint32_t>(m_argus, "Int");  // argus.IntBayerTuple
+  declare_array_2d<Argus::BayerTuple<float>>(m_argus, "FloatBayerTuple");  // argus.FloatBayerTupleArray2D
 
   // This isn't an enum because Nvidia rolled it's own C++ 03 thing.
   // FIXME(mdegans): figure out how to bind this
@@ -98,6 +138,8 @@ PYBIND11_MODULE(nvmanual, m) {
     .doc() = "Get rgb histogram (if enabled, else returns None)";
   c_metadata.def_property_readonly("scene_lux", &nvmanualcam::Metadata::getSceneLux)
     .doc() = "Get approximate scene illumination in lux.";
+  c_metadata.def("sharpness_values", &nvmanualcam::Metadata::getSharpnessValues)
+    .doc() = "Get 64x64 array of sharpness values.";
   c_metadata.def(
     "sharpness_score",
     py::overload_cast<Argus::Rectangle<float>>(&nvmanualcam::Metadata::getSharpnessScore),
@@ -142,5 +184,4 @@ PYBIND11_MODULE(nvmanual, m) {
     .doc() = "Get the sensor sensitivity (ISO value)";
   c_metadata.def_property_readonly("sensor_timestamp", &nvmanualcam::Metadata::getSensorTimestamp)
     .doc() = "Get the sensor timestamp.";
-  // TODO(Argus::Array2D, getSharpnessValues)
 }

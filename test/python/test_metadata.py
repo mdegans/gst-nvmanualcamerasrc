@@ -80,6 +80,26 @@ def metadata_probe(pad: Gst.Pad, info: Gst.PadProbeInfo, data: Any):
         assert type(roi_sharpness) is float
         print(f"roi sharpness: {roi_sharpness}")
 
+        # these are the raw sharpness values. Prefer using or modifying
+        # sharpness_score as operating on this from python is slow because
+        # python objects are being constantly created.
+        s_values = meta.sharpness_values()
+        print(f"sharpness values length: {len(s_values)}")
+        assert type(s_values) is nvmanual.argus.FloatBayerTupleArray2D
+        for v in s_values:
+            assert type(v) is nvmanual.argus.FloatBayerTuple
+        assert type(s_values.at(x=63, y=63)) is nvmanual.argus.FloatBayerTuple
+        try:
+            s_values.at(64, 0)
+        except IndexError as e:
+            print("sharpness values x index check ok")
+            pass
+        try:
+            s_values.at(0, 64)
+        except IndexError as e:
+            print("sharpness values y index check ok")
+            pass
+
         # These are tonemap curves. They're not currently available and this
         # is a bug. Whose fault that is, IDK yet.
         t_curve = meta.tonemap_curves()
