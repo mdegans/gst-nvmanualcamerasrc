@@ -24,11 +24,26 @@ def metadata_probe(pad: Gst.Pad, info: Gst.PadProbeInfo, data: Any):
         meta = nvmanual.Metadata.from_buffer(info.get_buffer())
         assert meta is not None
 
-        # b_hist = meta.bayer_histogram()
-        # assert b_hist is not None
+        b_hist = meta.bayer_histogram()
+        assert b_hist is not None
+        assert type(b_hist) is list
+        assert len(b_hist) is 256
+        bayer_tuple = b_hist[0]
+        assert type(bayer_tuple.r) is int
+        assert type(bayer_tuple.g_even) is int
+        assert type(bayer_tuple.g_odd) is int
+        assert type(bayer_tuple.b) is int
+        print(f"got bayer histogram of length: {len(b_hist)}")
 
-        # rgb_hist = meta.rgb_histogram()
-        # assert rgb_hist is not None
+        rgb_hist = meta.rgb_histogram()
+        assert rgb_hist is not None
+        assert type(rgb_hist) is list
+        assert len(rgb_hist) == 256
+        rgb_tuple = rgb_hist[0]
+        assert type(rgb_tuple.r) is int
+        assert type(rgb_tuple.g) is int
+        assert type(rgb_tuple.b) is int
+        print(f"got rgb histogram of length: {len(rgb_hist)}")
 
         lux = meta.scene_lux
         assert type(lux) is float
@@ -50,7 +65,8 @@ def metadata_probe(pad: Gst.Pad, info: Gst.PadProbeInfo, data: Any):
 
         # ccx = meta.color_correction_matrix()
         # assert ccx is not None
-    except AssertionError:
+    except AssertionError as e:
+        print(e)
         retcode = 1
 
     return Gst.PadProbeReturn.OK
