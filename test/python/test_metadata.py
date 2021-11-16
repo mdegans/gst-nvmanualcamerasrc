@@ -19,11 +19,17 @@ retcode = 0
 
 
 def metadata_probe(pad: Gst.Pad, info: Gst.PadProbeInfo, data: Any):
-    # todo: comprehensive checks of each
     try:
+        # To get Metadata in python, use the `from_buffer` method and supply
+        # it a Gst.Buffer. Using a probe is just one way of doing this. There is
+        # possibility `from_buffer` can return None if no metadata is available
+        # or something goes wrong.
         meta = nvmanual.Metadata.from_buffer(info.get_buffer())
         assert meta is not None
 
+        # a Bayer histogram is normally available. This is a 256 element list
+        # where a bayer value is the index and the returning tuple contains
+        # counts for that value.
         b_hist = meta.bayer_histogram()
         assert b_hist is not None
         assert type(b_hist) is list
@@ -35,6 +41,9 @@ def metadata_probe(pad: Gst.Pad, info: Gst.PadProbeInfo, data: Any):
         assert type(bayer_tuple.b) is int
         print(f"got bayer histogram of length: {len(b_hist)}")
 
+        # a RGB histogram is normally available. This is a 256 element list
+        # where a RGB value is the index and the returning tuple contains
+        # counts for that value.
         rgb_hist = meta.rgb_histogram()
         assert rgb_hist is not None
         assert type(rgb_hist) is list
@@ -45,21 +54,29 @@ def metadata_probe(pad: Gst.Pad, info: Gst.PadProbeInfo, data: Any):
         assert type(rgb_tuple.b) is int
         print(f"got rgb histogram of length: {len(rgb_hist)}")
 
+        # This is very approximate scene lux. It's useful mostly to cheaply find
+        # the brightest frame (eg, the one where flash is brightest).
         lux = meta.scene_lux
         assert type(lux) is float
         print(f"scene lux: {lux}")
 
-        # sharpness using the default ROI (entire image)
+        # This calculates the sharpness score from an internal array of
+        # sharpness values. This is very cheap since the GPU/ISP has already
+        # done the hard work.
         sharpness = meta.sharpness_score()
         assert type(sharpness) is float
         print(f"scene sharpness: {sharpness}")
 
-        # sharpness using just a ROI crop
+        # This does the same as the above, only within a ROI. It's important to
+        # note that the internal sharpness map is 64x64 always so a very small
+        # ROI will not work as expected.
         roi = nvmanual.argus.FloatRectangle(0.4, 0.4, 0.6, 0.6)
         roi_sharpness = meta.sharpness_score(roi)
         assert type(roi_sharpness) is float
         print(f"roi sharpness: {roi_sharpness}")
 
+        # These are tonemap curves. They're not currently available and this
+        # is a bug. Whose fault that is, IDK yet.
         t_curve = meta.tonemap_curves()
         # FIXME(mdegans): not very important for client's purpose but in the
         # future it might be.
