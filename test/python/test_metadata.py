@@ -19,6 +19,8 @@ retcode = 0
 
 
 def metadata_probe(pad: Gst.Pad, info: Gst.PadProbeInfo, data: Any):
+    global retcode
+
     try:
         # To get Metadata in python, use the `from_buffer` method and supply
         # it a Gst.Buffer. Using a probe is just one way of doing this. There is
