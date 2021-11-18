@@ -65,7 +65,7 @@ void declare_array_2d(py::module& m, std::string typestr) {
       .def_static(
           "from_xy",
           [](uint32_t x, uint32_t y) {
-            return std::make_unique<Argus::Array2D<T>>(Argus::Size2D(x, y));
+            return std::make_unique<Argus::Array2D<T>>(Argus::Size2D<uint32_t>(x, y));
           },
           py::arg("x"), py::arg("y"))
       .def("__len__",
