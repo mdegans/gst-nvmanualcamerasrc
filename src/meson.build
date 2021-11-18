@@ -154,6 +154,8 @@ if python3.found() and dependency('python3', required:false).found()
     include_directories: [gstnvmanualcamerasrc_incdirs, mmapi_incdirs],
     cpp_args: gstnvmanualcamera_metadata_cflags,
     install: true,
+    # by default, this uses python3/dist-packages but this is not in sys.path
+    install_dir: '/usr/local/lib/python3.6/dist-packages',
   )
   pymod_path = meson.current_build_dir()
 else
